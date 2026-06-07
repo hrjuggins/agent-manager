@@ -7,7 +7,7 @@ export interface LaunchResult {
 }
 
 export function openInIDE(workstream: Workstream): LaunchResult {
-	const target = workstream.ideWorkspace || workstream.repoPath;
+	const target = workstream.ideWorkspace || workstream.worktreePath || workstream.repoPath;
 	if (!target) {
 		return { success: false, message: 'No IDE workspace or repo path configured' };
 	}

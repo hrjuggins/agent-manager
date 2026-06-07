@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import WorkstreamForm from '$lib/components/WorkstreamForm.svelte';
-	import type { WorkstreamUpdate } from '$lib/types';
+	import type { WorkstreamUpdate, EnvironmentStatus } from '$lib/types';
 
 	let { data } = $props();
 	let editing = $state(false);
+	let envLoading = $state(false);
+	let envStatus = $state<EnvironmentStatus | null>(data.workstream.environment ?? null);
+	let showSetupLog = $state(false);
 
 	async function launch(action: string) {
 		const res = await fetch(`/api/workstreams/${data.workstream.id}/launch`, {
@@ -42,6 +45,36 @@
 		if (!confirm('Delete this workstream?')) return;
 		await fetch(`/api/workstreams/${data.workstream.id}`, { method: 'DELETE' });
 		goto('/');
+	}
+
+	async function environmentAction(action: 'start' | 'stop' | 'teardown') {
+		envLoading = true;
+		try {
+			const res = await fetch(`/api/workstreams/${data.workstream.id}/environment`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action })
+			});
+			const result = await res.json();
+			if (result.environment) {
+				envStatus = result.environment;
+			} else {
+				envStatus = null;
+			}
+			if (!result.success) {
+				alert(result.message || 'Environment action failed');
+			}
+			invalidateAll();
+		} finally {
+			envLoading = false;
+		}
+	}
+
+	async function refreshEnvironment() {
+		const res = await fetch(`/api/workstreams/${data.workstream.id}/environment`);
+		if (res.ok) {
+			envStatus = await res.json();
+		}
 	}
 </script>
 
@@ -151,6 +184,155 @@
 				</button>
 			</div>
 		</section>
+
+		<!-- Environment -->
+		{#if data.workstream.repoPath}
+			<section class="space-y-3">
+				<div class="flex items-center justify-between">
+					<h2 class="text-sm font-semibold tracking-wide text-zinc-400 uppercase">Environment</h2>
+					<div class="flex items-center gap-2">
+						{#if envStatus?.state === 'running'}
+							<span class="flex items-center gap-1.5 text-xs text-green-400">
+								<span class="inline-block h-2 w-2 animate-pulse rounded-full bg-green-500"></span>
+								Running
+							</span>
+						{:else if envStatus?.state === 'error'}
+							<span class="flex items-center gap-1.5 text-xs text-red-400">
+								<span class="inline-block h-2 w-2 rounded-full bg-red-500"></span>
+								Error
+							</span>
+						{:else if envStatus?.state === 'starting'}
+							<span class="flex items-center gap-1.5 text-xs text-yellow-400">
+								<span class="inline-block h-2 w-2 animate-pulse rounded-full bg-yellow-500"></span>
+								Starting
+							</span>
+						{:else}
+							<span class="text-xs text-zinc-500">Stopped</span>
+						{/if}
+					</div>
+				</div>
+
+				<div class="flex flex-wrap gap-2">
+					{#if !envStatus || envStatus.state === 'stopped' || envStatus.state === 'error'}
+						<button
+							onclick={() => environmentAction('start')}
+							disabled={envLoading}
+							class="flex items-center gap-2 rounded-md border border-green-800 bg-green-900/50 px-3 py-2 text-sm text-green-300 transition hover:bg-green-900 disabled:opacity-50"
+						>
+							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+								/>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+								/>
+							</svg>
+							{envLoading ? 'Starting...' : 'Start Environment'}
+						</button>
+					{:else}
+						<button
+							onclick={() => environmentAction('stop')}
+							disabled={envLoading}
+							class="flex items-center gap-2 rounded-md bg-zinc-800 px-3 py-2 text-sm transition hover:bg-zinc-700 disabled:opacity-50"
+						>
+							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+								/>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
+								/>
+							</svg>
+							Stop
+						</button>
+						<button
+							onclick={() => refreshEnvironment()}
+							class="flex items-center gap-2 rounded-md bg-zinc-800 px-3 py-2 text-sm transition hover:bg-zinc-700"
+						>
+							Refresh
+						</button>
+					{/if}
+					{#if data.workstream.worktreePath}
+						<button
+							onclick={() => environmentAction('teardown')}
+							disabled={envLoading}
+							class="flex items-center gap-2 rounded-md border border-red-900 px-3 py-2 text-sm text-red-400 transition hover:bg-red-950 disabled:opacity-50"
+						>
+							Teardown
+						</button>
+					{/if}
+				</div>
+
+				<!-- Running Services -->
+				{#if envStatus?.services && envStatus.services.length > 0}
+					<div class="space-y-2">
+						{#each envStatus.services as service (service.name)}
+							<div
+								class="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/50 p-3"
+							>
+								<div>
+									<span class="text-sm font-medium">{service.name}</span>
+									<span class="ml-2 font-mono text-xs text-zinc-500">{service.command}</span>
+								</div>
+								<div class="flex items-center gap-3 text-xs">
+									{#if service.port}
+										<a
+											href="http://localhost:{service.port}"
+											target="_blank"
+											class="text-indigo-400 hover:text-indigo-300"
+										>
+											:{service.port}
+										</a>
+									{/if}
+									<span
+										class="inline-block h-2 w-2 rounded-full {service.status === 'running'
+											? 'bg-green-500'
+											: 'bg-red-500'}"
+									></span>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+
+				<!-- Worktree Path -->
+				{#if data.workstream.worktreePath}
+					<div class="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+						<span class="text-xs font-semibold tracking-wide text-zinc-500 uppercase">Worktree</span
+						>
+						<p class="mt-1 truncate font-mono text-xs text-zinc-400">
+							{data.workstream.worktreePath}
+						</p>
+					</div>
+				{/if}
+
+				<!-- Setup Log Toggle -->
+				{#if envStatus?.setupLog}
+					<button
+						onclick={() => (showSetupLog = !showSetupLog)}
+						class="text-xs text-zinc-500 hover:text-zinc-300"
+					>
+						{showSetupLog ? 'Hide' : 'Show'} setup log
+					</button>
+					{#if showSetupLog}
+						<pre
+							class="max-h-48 overflow-auto rounded-lg border border-zinc-800 bg-black p-3 font-mono text-xs text-zinc-400">{envStatus.setupLog}</pre>
+					{/if}
+				{/if}
+			</section>
+		{/if}
 
 		<!-- Details -->
 		<section class="grid gap-4 sm:grid-cols-2">
