@@ -5,6 +5,7 @@
 
 	let { data } = $props();
 	let editing = $state(false);
+	let confirmingDelete = $state(false);
 	let envLoading = $state(false);
 	let envStatus = $state<EnvironmentStatus | null>(data.workstream.environment ?? null);
 	let showSetupLog = $state(false);
@@ -42,7 +43,6 @@
 	}
 
 	async function handleDelete() {
-		if (!confirm('Delete this workstream?')) return;
 		await fetch(`/api/workstreams/${data.workstream.id}`, { method: 'DELETE' });
 		goto('/');
 	}
@@ -106,12 +106,27 @@
 			>
 				{editing ? 'Cancel' : 'Edit'}
 			</button>
-			<button
-				onclick={handleDelete}
-				class="rounded-md border border-red-900 px-3 py-1.5 text-sm text-red-400 transition hover:bg-red-950"
-			>
-				Delete
-			</button>
+			{#if confirmingDelete}
+				<button
+					onclick={handleDelete}
+					class="rounded-md bg-red-700 px-3 py-1.5 text-sm text-white transition hover:bg-red-600"
+				>
+					Confirm Delete
+				</button>
+				<button
+					onclick={() => (confirmingDelete = false)}
+					class="rounded-md border border-zinc-700 px-3 py-1.5 text-sm transition hover:bg-zinc-800"
+				>
+					Cancel
+				</button>
+			{:else}
+				<button
+					onclick={() => (confirmingDelete = true)}
+					class="rounded-md border border-red-900 px-3 py-1.5 text-sm text-red-400 transition hover:bg-red-950"
+				>
+					Delete
+				</button>
+			{/if}
 		</div>
 	</div>
 
