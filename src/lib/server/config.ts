@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
-import type { RepoSettings, ServiceDefinition } from '$lib/types';
+import type { RepoSettings } from '$lib/types';
 
 export interface AppConfig {
 	linearApiKey?: string;
@@ -70,7 +70,7 @@ export function createRepo(data: {
 	name: string;
 	path: string;
 	setupScript?: string;
-	services?: ServiceDefinition[];
+	basePort?: number;
 }): RepoSettings {
 	const config = readConfig();
 	const repo: RepoSettings = { id: randomUUID(), ...data };

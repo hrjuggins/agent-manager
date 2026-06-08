@@ -3,11 +3,13 @@ import { getWorkstream, updateWorkstream } from '$lib/server/store';
 import { createWorktree, removeWorktree } from '$lib/server/worktree';
 import {
 	runSetup,
-	startServices,
+	startService,
 	stopServices,
 	getEnvironmentStatus,
-	readRepoConfig
+	readRepoConfig,
+	getNextPort
 } from '$lib/server/environment';
+import { getRepoByPath } from '$lib/server/config';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params }) => {
@@ -58,14 +60,24 @@ export const POST: RequestHandler = async ({ params, request }) => {
 				}
 			}
 
-			// Start services
-			const services = startServices(params.id, cwd, workstream.repoPath);
+			// Auto-assign port if not already assigned, then start service
+			let port = workstream.assignedPort;
+			if (config?.serviceCommand) {
+				if (!port) {
+					const repoSettings = getRepoByPath(workstream.repoPath);
+					const basePort = repoSettings?.basePort ?? 3000;
+					port = getNextPort(workstream.repoPath, basePort);
+					updateWorkstream(params.id, { assignedPort: port });
+				}
+				startService(params.id, cwd, workstream.repoPath, port);
+			}
+
 			const envStatus = getEnvironmentStatus(params.id);
 			updateWorkstream(params.id, { environment: envStatus });
 
 			return json({
 				success: true,
-				message: `Environment started with ${services.length} service(s)`,
+				message: `Environment started${port ? ` on port ${port}` : ''}`,
 				environment: envStatus
 			});
 		}
@@ -82,7 +94,11 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			stopServices(params.id);
 			if (workstream.worktreePath && workstream.repoPath) {
 				removeWorktree(workstream.repoPath, workstream.worktreePath);
-				updateWorkstream(params.id, { worktreePath: undefined, environment: undefined });
+				updateWorkstream(params.id, {
+					worktreePath: undefined,
+					environment: undefined,
+					assignedPort: undefined
+				});
 			}
 			return json({ success: true, message: 'Environment torn down' });
 		}

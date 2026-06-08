@@ -1,6 +1,5 @@
 import { json, error } from '@sveltejs/kit';
 import { listRepos, createRepo } from '$lib/server/config';
-import type { ServiceDefinition } from '$lib/types';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
@@ -12,7 +11,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		name: string;
 		path: string;
 		setupScript?: string;
-		services?: ServiceDefinition[];
+		basePort?: number;
 	};
 
 	if (!data.name || !data.path) {

@@ -3,11 +3,12 @@ import { listWorkstreams, createWorkstream, updateWorkstream } from '$lib/server
 import { createWorktree } from '$lib/server/worktree';
 import {
 	runSetup,
-	startServices,
+	startService,
 	getEnvironmentStatus,
-	readRepoConfig
+	readRepoConfig,
+	getNextPort
 } from '$lib/server/environment';
-// readRepoConfig used by bootstrapEnvironment below
+import { getRepoByPath } from '$lib/server/config';
 import type { WorkstreamCreate } from '$lib/types';
 import type { RequestHandler } from './$types';
 
@@ -51,7 +52,7 @@ async function bootstrapEnvironment(
 	const cwd = worktreeResult.worktreePath!;
 	updateWorkstream(workstreamId, { worktreePath: cwd });
 
-	// Run setup commands
+	// Run setup commands (all lines except the last)
 	const config = readRepoConfig(repoPath);
 	if (config?.setup) {
 		const setupResult = await runSetup(workstreamId, cwd, repoPath);
@@ -63,8 +64,16 @@ async function bootstrapEnvironment(
 		}
 	}
 
-	// Start services
-	startServices(workstreamId, cwd, repoPath);
+	// Auto-assign port and start service (last line of setup script)
+	if (config?.serviceCommand) {
+		const repoSettings = getRepoByPath(repoPath);
+		const basePort = repoSettings?.basePort ?? 3000;
+		const port = getNextPort(repoPath, basePort);
+
+		updateWorkstream(workstreamId, { assignedPort: port });
+		startService(workstreamId, cwd, repoPath, port);
+	}
+
 	const envStatus = getEnvironmentStatus(workstreamId);
 	updateWorkstream(workstreamId, { environment: envStatus });
 }

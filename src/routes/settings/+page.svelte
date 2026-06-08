@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { RepoSettings, ServiceDefinition } from '$lib/types';
+	import type { RepoSettings } from '$lib/types';
 
 	// --- Linear ---
 	let linearApiKey = $state('');
@@ -17,7 +17,7 @@
 	let repoName = $state('');
 	let repoPath = $state('');
 	let repoSetupScript = $state('');
-	let repoServices = $state<ServiceDefinition[]>([]);
+	let repoBasePort = $state(3000);
 	let repoSaving = $state(false);
 	let repoMessage = $state('');
 
@@ -83,7 +83,7 @@
 		repoName = '';
 		repoPath = '';
 		repoSetupScript = '';
-		repoServices = [];
+		repoBasePort = 3000;
 		repoMessage = '';
 		showAddRepo = true;
 	}
@@ -93,7 +93,7 @@
 		repoName = repo.name;
 		repoPath = repo.path;
 		repoSetupScript = repo.setupScript ?? '';
-		repoServices = repo.services ? [...repo.services] : [];
+		repoBasePort = repo.basePort ?? 3000;
 		repoMessage = '';
 		showAddRepo = true;
 	}
@@ -102,14 +102,6 @@
 		showAddRepo = false;
 		editingRepo = null;
 		repoMessage = '';
-	}
-
-	function addService() {
-		repoServices = [...repoServices, { name: '', command: '' }];
-	}
-
-	function removeService(index: number) {
-		repoServices = repoServices.filter((_, i) => i !== index);
 	}
 
 	async function saveRepo() {
@@ -124,7 +116,7 @@
 				name: repoName,
 				path: repoPath,
 				setupScript: repoSetupScript || undefined,
-				services: repoServices.filter((s) => s.name && s.command)
+				basePort: repoBasePort || 3000
 			};
 
 			let res: Response;
@@ -231,7 +223,7 @@
 			<div>
 				<h2 class="text-lg font-semibold">Repositories</h2>
 				<p class="mt-1 text-sm text-zinc-400">
-					Configure repos with environment setup scripts that run on worktree creation.
+					Configure repos with setup scripts. Ports are auto-assigned per workstream.
 				</p>
 			</div>
 			{#if !showAddRepo}
@@ -255,17 +247,16 @@
 								<p class="mt-0.5 text-sm text-zinc-400">{repo.path}</p>
 								{#if repo.setupScript}
 									<p class="mt-1 text-xs text-zinc-500">
-										Setup: {repo.setupScript.split('\n').length} line{repo.setupScript.split('\n')
-											.length === 1
+										Setup: {repo.setupScript.split('\n').filter((l) => l.trim()).length} line{repo.setupScript
+											.split('\n')
+											.filter((l) => l.trim()).length === 1
 											? ''
 											: 's'}
 									</p>
 								{/if}
-								{#if repo.services && repo.services.length > 0}
-									<p class="mt-0.5 text-xs text-zinc-500">
-										Services: {repo.services.map((s) => s.name).join(', ')}
-									</p>
-								{/if}
+								<p class="mt-0.5 text-xs text-zinc-500">
+									Base port: {repo.basePort ?? 3000}
+								</p>
 							</div>
 							<div class="flex gap-2">
 								<button
@@ -324,62 +315,31 @@
 						>Setup Script</label
 					>
 					<p class="mt-0.5 text-xs text-zinc-500">
-						Runs in the worktree directory after creation. One command per line.
+						One command per line. Commands run in order — the last line runs as a long-running
+						service (e.g. dev server). Use <code class="text-zinc-400">$PORT</code> to reference the auto-assigned
+						port.
 					</p>
 					<textarea
 						id="setupScript"
 						bind:value={repoSetupScript}
-						rows={6}
-						placeholder="npm install\nnpm run dev"
+						rows={4}
+						placeholder="npm install\nnpm run dev -- --port $PORT"
 						class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 font-mono text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
 					></textarea>
 				</div>
 
-				<!-- Services -->
 				<div>
-					<div class="flex items-center justify-between">
-						<label class="block text-sm font-medium text-zinc-300">Services</label>
-						<button
-							type="button"
-							onclick={addService}
-							class="text-xs text-indigo-400 hover:text-indigo-300"
-						>
-							+ Add Service
-						</button>
-					</div>
+					<label for="basePort" class="block text-sm font-medium text-zinc-300">Base Port</label>
 					<p class="mt-0.5 text-xs text-zinc-500">
-						Long-running processes started after setup (e.g. dev server).
+						Starting port number. Each new workstream auto-increments from here.
 					</p>
-					<!-- eslint-disable-next-line @typescript-eslint/no-unused-vars -->
-					{#each repoServices as svc, i (i)}
-						<div class="mt-2 flex gap-2">
-							<input
-								type="text"
-								bind:value={repoServices[i].name}
-								placeholder="Name (e.g. dev-server)"
-								class="flex-1 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-							/>
-							<input
-								type="text"
-								bind:value={repoServices[i].command}
-								placeholder="Command (e.g. npm run dev)"
-								class="flex-2 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-							/>
-							<input
-								type="number"
-								bind:value={repoServices[i].port}
-								placeholder="Port"
-								class="w-20 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-							/>
-							<button
-								type="button"
-								onclick={() => removeService(i)}
-								class="text-xs text-red-400 hover:text-red-300"
-							>
-								✕
-							</button>
-						</div>
-					{/each}
+					<input
+						id="basePort"
+						type="number"
+						bind:value={repoBasePort}
+						placeholder="3000"
+						class="mt-1 w-24 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+					/>
 				</div>
 
 				{#if repoMessage}
