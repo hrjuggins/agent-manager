@@ -63,7 +63,22 @@ export function runScript(
 
 	// Run the entire setup script as a single shell process
 	const script = config.setup.join('\n');
-	const child = spawn('sh', ['-c', script], {
+
+	// Detect interpreter from shebang (default to sh)
+	let shell = 'sh';
+	const shebangMatch = script.match(/^#!\s*(.+)/);
+	if (shebangMatch) {
+		const shebang = shebangMatch[1].trim();
+		if (shebang.includes('bash')) {
+			shell = 'bash';
+		} else if (shebang.includes('zsh')) {
+			shell = 'zsh';
+		} else if (shebang === '/usr/bin/env fish' || shebang.includes('/fish')) {
+			shell = 'fish';
+		}
+	}
+
+	const child = spawn(shell, ['-c', script], {
 		cwd,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		detached: true,
