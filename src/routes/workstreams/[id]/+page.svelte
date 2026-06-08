@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
+	import { onMount, onDestroy } from 'svelte';
 	import WorkstreamForm from '$lib/components/WorkstreamForm.svelte';
 	import type { WorkstreamUpdate, EnvironmentStatus } from '$lib/types';
 
@@ -9,6 +10,36 @@
 	let envLoading = $state(false);
 	let envStatus = $state<EnvironmentStatus | null>(data.workstream.environment ?? null);
 	let showSetupLog = $state(false);
+	let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+	// Auto-poll when environment is starting (background bootstrap)
+	onMount(() => {
+		if (envStatus?.state === 'starting') {
+			startPolling();
+		}
+	});
+
+	onDestroy(() => {
+		stopPolling();
+	});
+
+	function startPolling() {
+		stopPolling();
+		pollTimer = setInterval(async () => {
+			await refreshEnvironment();
+			if (envStatus?.state !== 'starting') {
+				stopPolling();
+				invalidateAll();
+			}
+		}, 3000);
+	}
+
+	function stopPolling() {
+		if (pollTimer) {
+			clearInterval(pollTimer);
+			pollTimer = null;
+		}
+	}
 
 	async function launch(action: string) {
 		const res = await fetch(`/api/workstreams/${data.workstream.id}/launch`, {
@@ -74,6 +105,45 @@
 		const res = await fetch(`/api/workstreams/${data.workstream.id}/environment`);
 		if (res.ok) {
 			envStatus = await res.json();
+		}
+	}
+
+	let linearRefreshing = $state(false);
+
+	async function refreshLinearTicket() {
+		const ticket = data.workstream.linearTicket;
+		if (!ticket?.url && !ticket?.id) return;
+
+		linearRefreshing = true;
+		try {
+			const body: Record<string, string> = {};
+			if (ticket.url) body.url = ticket.url;
+			else body.identifier = ticket.id;
+
+			const res = await fetch('/api/linear/resolve', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(body)
+			});
+
+			if (res.ok) {
+				const issueData = await res.json();
+				await fetch(`/api/workstreams/${data.workstream.id}`, {
+					method: 'PATCH',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						linearTicket: {
+							id: issueData.identifier,
+							url: issueData.url,
+							title: issueData.title,
+							status: issueData.status
+						}
+					})
+				});
+				invalidateAll();
+			}
+		} finally {
+			linearRefreshing = false;
 		}
 	}
 </script>
@@ -383,21 +453,32 @@
 				<h2 class="text-sm font-semibold tracking-wide text-zinc-400 uppercase">External</h2>
 				<div class="grid gap-3 sm:grid-cols-2">
 					{#if data.workstream.linearTicket}
-						<button
-							onclick={() => launch('linear')}
-							class="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 text-left transition hover:border-zinc-700"
+						<div
+							class="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 transition hover:border-zinc-700"
 						>
-							<h3 class="text-xs font-semibold tracking-wide text-zinc-500 uppercase">
-								Linear Ticket
-							</h3>
-							<p class="mt-1 text-sm font-medium">{data.workstream.linearTicket.title}</p>
-							<div class="mt-1 flex items-center gap-2 text-xs text-zinc-400">
-								<span class="font-mono">{data.workstream.linearTicket.id}</span>
-								<span class="rounded bg-zinc-800 px-1.5 py-0.5">
-									{data.workstream.linearTicket.status}
-								</span>
+							<div class="flex items-start justify-between">
+								<button onclick={() => launch('linear')} class="text-left">
+									<h3 class="text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+										Linear Ticket
+									</h3>
+									<p class="mt-1 text-sm font-medium">{data.workstream.linearTicket.title}</p>
+									<div class="mt-1 flex items-center gap-2 text-xs text-zinc-400">
+										<span class="font-mono">{data.workstream.linearTicket.id}</span>
+										<span class="rounded bg-zinc-800 px-1.5 py-0.5">
+											{data.workstream.linearTicket.status}
+										</span>
+									</div>
+								</button>
+								<button
+									onclick={refreshLinearTicket}
+									disabled={linearRefreshing}
+									class="rounded px-2 py-1 text-xs text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-50"
+									title="Refresh from Linear"
+								>
+									{linearRefreshing ? '...' : '↻'}
+								</button>
 							</div>
-						</button>
+						</div>
 					{/if}
 					{#if data.workstream.pullRequest}
 						<button

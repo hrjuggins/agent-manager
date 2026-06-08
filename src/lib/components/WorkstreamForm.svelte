@@ -20,11 +20,59 @@
 	let linearUrl = $state(workstream?.linearTicket?.url ?? '');
 	let linearTitle = $state(workstream?.linearTicket?.title ?? '');
 	let linearStatus = $state(workstream?.linearTicket?.status ?? '');
+	let linearFetching = $state(false);
+	let linearError = $state('');
 
 	// PR fields
 	let prUrl = $state(workstream?.pullRequest?.url ?? '');
 	let prTitle = $state(workstream?.pullRequest?.title ?? '');
 	let prStatus = $state(workstream?.pullRequest?.status ?? '');
+
+	async function fetchLinearTicket() {
+		const input = linearUrl || linearId;
+		if (!input) return;
+
+		linearFetching = true;
+		linearError = '';
+		try {
+			const body: Record<string, string> = {};
+			if (linearUrl) body.url = linearUrl;
+			else body.identifier = linearId;
+
+			const res = await fetch('/api/linear/resolve', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(body)
+			});
+
+			if (!res.ok) {
+				const err = await res.json();
+				linearError = err.message || 'Failed to fetch ticket';
+				return;
+			}
+
+			const data = await res.json();
+			linearId = data.identifier;
+			linearTitle = data.title;
+			linearStatus = data.status;
+			if (data.url) linearUrl = data.url;
+
+			// Auto-populate workstream name if empty
+			if (!name && data.title) {
+				name = data.title;
+			}
+		} catch {
+			linearError = 'Network error fetching ticket';
+		} finally {
+			linearFetching = false;
+		}
+	}
+
+	function handleLinearUrlBlur() {
+		if (linearUrl && linearUrl.includes('linear.app')) {
+			fetchLinearTicket();
+		}
+	}
 
 	function handleSubmit(e: Event) {
 		e.preventDefault();
@@ -49,6 +97,69 @@
 </script>
 
 <form onsubmit={handleSubmit} class="space-y-6">
+	<!-- Linear Ticket — first so it can populate name -->
+	<fieldset class="space-y-3 rounded-lg border border-zinc-800 p-4">
+		<legend class="px-2 text-sm font-medium text-zinc-400">Linear Ticket (optional)</legend>
+		<div>
+			<label for="linearUrl" class="block text-xs text-zinc-400">Ticket URL</label>
+			<div class="mt-1 flex gap-2">
+				<input
+					id="linearUrl"
+					type="text"
+					bind:value={linearUrl}
+					onblur={handleLinearUrlBlur}
+					placeholder="https://linear.app/team/issue/PRJ-123/..."
+					class="flex-1 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+				/>
+				<button
+					type="button"
+					onclick={fetchLinearTicket}
+					disabled={linearFetching || (!linearUrl && !linearId)}
+					class="rounded-md border border-zinc-700 px-3 py-2 text-sm transition hover:bg-zinc-800 disabled:opacity-40"
+				>
+					{linearFetching ? 'Fetching...' : 'Fetch'}
+				</button>
+			</div>
+			{#if linearError}
+				<p class="mt-1 text-xs text-red-400">{linearError}</p>
+			{/if}
+		</div>
+		<div class="grid gap-4 sm:grid-cols-3">
+			<div>
+				<label for="linearId" class="block text-xs text-zinc-400">ID</label>
+				<input
+					id="linearId"
+					type="text"
+					bind:value={linearId}
+					placeholder="PRJ-123"
+					class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+				/>
+			</div>
+			<div>
+				<label for="linearTitle" class="block text-xs text-zinc-400">Title</label>
+				<input
+					id="linearTitle"
+					type="text"
+					bind:value={linearTitle}
+					placeholder="Auto-populated from ticket"
+					readonly
+					class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none"
+				/>
+			</div>
+			<div>
+				<label for="linearStatus" class="block text-xs text-zinc-400">Status</label>
+				<input
+					id="linearStatus"
+					type="text"
+					bind:value={linearStatus}
+					placeholder="Auto-populated from ticket"
+					readonly
+					class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none"
+				/>
+			</div>
+		</div>
+	</fieldset>
+
 	<!-- Name -->
 	<div>
 		<label for="name" class="block text-sm font-medium text-zinc-300">Name *</label>
@@ -57,7 +168,7 @@
 			type="text"
 			bind:value={name}
 			required
-			placeholder="e.g. Add user onboarding flow"
+			placeholder="e.g. Add user onboarding flow (auto-filled from Linear ticket)"
 			class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
 		/>
 	</div>
@@ -124,53 +235,6 @@
 			class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
 		/>
 	</div>
-
-	<!-- Linear Ticket -->
-	<fieldset class="space-y-3 rounded-lg border border-zinc-800 p-4">
-		<legend class="px-2 text-sm font-medium text-zinc-400">Linear Ticket (optional)</legend>
-		<div class="grid gap-4 sm:grid-cols-2">
-			<div>
-				<label for="linearId" class="block text-xs text-zinc-400">Ticket ID</label>
-				<input
-					id="linearId"
-					type="text"
-					bind:value={linearId}
-					placeholder="PRJ-123"
-					class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-				/>
-			</div>
-			<div>
-				<label for="linearUrl" class="block text-xs text-zinc-400">URL</label>
-				<input
-					id="linearUrl"
-					type="text"
-					bind:value={linearUrl}
-					placeholder="https://linear.app/..."
-					class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-				/>
-			</div>
-			<div>
-				<label for="linearTitle" class="block text-xs text-zinc-400">Title</label>
-				<input
-					id="linearTitle"
-					type="text"
-					bind:value={linearTitle}
-					placeholder="Ticket title"
-					class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-				/>
-			</div>
-			<div>
-				<label for="linearStatus" class="block text-xs text-zinc-400">Status</label>
-				<input
-					id="linearStatus"
-					type="text"
-					bind:value={linearStatus}
-					placeholder="In Progress"
-					class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-				/>
-			</div>
-		</div>
-	</fieldset>
 
 	<!-- Pull Request -->
 	<fieldset class="space-y-3 rounded-lg border border-zinc-800 p-4">
