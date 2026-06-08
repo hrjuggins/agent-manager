@@ -1,8 +1,11 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { randomUUID } from 'crypto';
+import type { RepoSettings, ServiceDefinition } from '$lib/types';
 
 export interface AppConfig {
 	linearApiKey?: string;
+	repos?: RepoSettings[];
 }
 
 const DATA_DIR = join(process.env.HOME || '~', '.workstream-hub');
@@ -47,4 +50,56 @@ export function validateLinearApiKey(key: string): string | null {
 	if (!key) return 'Key is empty';
 	if (!isValidApiKey(key)) return 'Key contains invalid characters — re-enter your real API key';
 	return null;
+}
+
+// --- Repo settings ---
+
+export function listRepos(): RepoSettings[] {
+	return readConfig().repos ?? [];
+}
+
+export function getRepo(id: string): RepoSettings | undefined {
+	return listRepos().find((r) => r.id === id);
+}
+
+export function getRepoByPath(path: string): RepoSettings | undefined {
+	return listRepos().find((r) => r.path === path);
+}
+
+export function createRepo(data: {
+	name: string;
+	path: string;
+	setupScript?: string;
+	services?: ServiceDefinition[];
+}): RepoSettings {
+	const config = readConfig();
+	const repo: RepoSettings = { id: randomUUID(), ...data };
+	config.repos = [...(config.repos ?? []), repo];
+	writeConfig(config);
+	return repo;
+}
+
+export function updateRepo(
+	id: string,
+	data: Partial<Omit<RepoSettings, 'id'>>
+): RepoSettings | undefined {
+	const config = readConfig();
+	const repos = config.repos ?? [];
+	const index = repos.findIndex((r) => r.id === id);
+	if (index === -1) return undefined;
+	repos[index] = { ...repos[index], ...data };
+	config.repos = repos;
+	writeConfig(config);
+	return repos[index];
+}
+
+export function deleteRepo(id: string): boolean {
+	const config = readConfig();
+	const repos = config.repos ?? [];
+	const index = repos.findIndex((r) => r.id === id);
+	if (index === -1) return false;
+	repos.splice(index, 1);
+	config.repos = repos;
+	writeConfig(config);
+	return true;
 }

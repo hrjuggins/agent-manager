@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { getRepoByPath } from '$lib/server/config';
 import type { RepoConfig, EnvironmentStatus, RunningService } from '$lib/types';
 
 interface ManagedProcess {
@@ -18,6 +19,19 @@ const runningProcesses = new Map<string, ManagedProcess[]>();
 const setupLogs = new Map<string, string>();
 
 export function readRepoConfig(repoPath: string): RepoConfig | null {
+	// Check app settings first (repo configured via Settings UI)
+	const repoSettings = getRepoByPath(repoPath);
+	if (repoSettings) {
+		const setup = repoSettings.setupScript
+			? repoSettings.setupScript.split('\n').filter((l) => l.trim())
+			: undefined;
+		return {
+			setup,
+			services: repoSettings.services
+		};
+	}
+
+	// Fallback: check for .workstream-hub.json in repo root
 	const configPath = join(repoPath, '.workstream-hub.json');
 	if (!existsSync(configPath)) {
 		return null;

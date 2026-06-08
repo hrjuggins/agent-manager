@@ -7,6 +7,7 @@ import {
 	getEnvironmentStatus,
 	readRepoConfig
 } from '$lib/server/environment';
+// readRepoConfig used by bootstrapEnvironment below
 import type { WorkstreamCreate } from '$lib/types';
 import type { RequestHandler } from './$types';
 
@@ -19,19 +20,15 @@ export const POST: RequestHandler = async ({ request }) => {
 	const data = (await request.json()) as WorkstreamCreate;
 	const workstream = createWorkstream(data);
 
-	// Auto-setup: if repo + branch are set and repo has a config, bootstrap environment
+	// Auto-setup: if repo + branch are set, create worktree and run environment setup
 	if (workstream.repoPath && workstream.branch) {
-		const config = readRepoConfig(workstream.repoPath);
-		if (config) {
-			// Mark as starting and kick off setup in background
-			updateWorkstream(workstream.id, {
-				environment: { state: 'starting', services: [] }
-			});
+		updateWorkstream(workstream.id, {
+			environment: { state: 'starting', services: [] }
+		});
 
-			bootstrapEnvironment(workstream.id, workstream.repoPath, workstream.branch).catch(() => {
-				// Errors are captured in environment state
-			});
-		}
+		bootstrapEnvironment(workstream.id, workstream.repoPath, workstream.branch).catch(() => {
+			// Errors are captured in environment state
+		});
 	}
 
 	return json(workstream, { status: 201 });

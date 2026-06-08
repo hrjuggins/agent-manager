@@ -61,5 +61,13 @@ export interface ServiceDefinition {
 	port?: number;
 }
 
+export interface RepoSettings {
+	id: string;
+	name: string;
+	path: string;
+	setupScript?: string;
+	services?: ServiceDefinition[];
+}
+
 export type WorkstreamCreate = Omit<Workstream, 'id' | 'createdAt' | 'updatedAt'>;
 export type WorkstreamUpdate = Partial<WorkstreamCreate>;

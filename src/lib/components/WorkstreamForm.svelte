@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Workstream, WorkstreamCreate } from '$lib/types';
+	import { onMount } from 'svelte';
+	import type { Workstream, WorkstreamCreate, RepoSettings } from '$lib/types';
 
 	let {
 		workstream,
@@ -10,6 +11,27 @@
 	let status: 'active' | 'done' = $state(workstream?.status ?? 'active');
 	let repoPath = $state(workstream?.repoPath ?? '');
 	let branch = $state(workstream?.branch ?? '');
+
+	// Configured repos from settings
+	let configuredRepos = $state<RepoSettings[]>([]);
+	let selectedRepoId = $state('');
+
+	onMount(async () => {
+		const res = await fetch('/api/repos');
+		if (res.ok) {
+			configuredRepos = await res.json();
+			// If editing and repoPath matches a configured repo, select it
+			if (repoPath) {
+				const match = configuredRepos.find((r) => r.path === repoPath);
+				if (match) selectedRepoId = match.id;
+			}
+		}
+	});
+
+	function handleRepoSelect() {
+		const repo = configuredRepos.find((r) => r.id === selectedRepoId);
+		repoPath = repo?.path ?? '';
+	}
 	let ideWorkspace = $state(workstream?.ideWorkspace ?? '');
 	let aiChatUrl = $state(workstream?.aiChatUrl ?? '');
 	let browserUrl = $state(workstream?.browserUrl ?? '');
@@ -176,14 +198,31 @@
 	<!-- Repo & Branch -->
 	<div class="grid gap-4 sm:grid-cols-2">
 		<div>
-			<label for="repoPath" class="block text-sm font-medium text-zinc-300">Repository Path</label>
-			<input
-				id="repoPath"
-				type="text"
-				bind:value={repoPath}
-				placeholder="/path/to/repo"
-				class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-			/>
+			<label for="repoSelect" class="block text-sm font-medium text-zinc-300">Repository</label>
+			{#if configuredRepos.length > 0}
+				<select
+					id="repoSelect"
+					bind:value={selectedRepoId}
+					onchange={handleRepoSelect}
+					class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+				>
+					<option value="">Select a repo...</option>
+					{#each configuredRepos as repo (repo.id)}
+						<option value={repo.id}>{repo.name}</option>
+					{/each}
+				</select>
+				{#if repoPath}
+					<p class="mt-1 text-xs text-zinc-500">{repoPath}</p>
+				{/if}
+			{:else}
+				<input
+					id="repoSelect"
+					type="text"
+					bind:value={repoPath}
+					placeholder="/path/to/repo (configure repos in Settings)"
+					class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+				/>
+			{/if}
 		</div>
 		<div>
 			<label for="branch" class="block text-sm font-medium text-zinc-300">Branch</label>

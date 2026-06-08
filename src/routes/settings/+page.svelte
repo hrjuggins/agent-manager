@@ -1,23 +1,45 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import type { RepoSettings, ServiceDefinition } from '$lib/types';
 
+	// --- Linear ---
 	let linearApiKey = $state('');
 	let hasLinearKey = $state(false);
-	let saving = $state(false);
-	let message = $state('');
+	let linearSaving = $state(false);
+	let linearMessage = $state('');
+
+	// --- Repos ---
+	let repos = $state<RepoSettings[]>([]);
+	let editingRepo = $state<RepoSettings | null>(null);
+	let showAddRepo = $state(false);
+
+	// Add/edit form state
+	let repoName = $state('');
+	let repoPath = $state('');
+	let repoSetupScript = $state('');
+	let repoServices = $state<ServiceDefinition[]>([]);
+	let repoSaving = $state(false);
+	let repoMessage = $state('');
 
 	onMount(async () => {
-		const res = await fetch('/api/settings');
-		if (res.ok) {
-			const data = await res.json();
+		const [settingsRes, reposRes] = await Promise.all([
+			fetch('/api/settings'),
+			fetch('/api/repos')
+		]);
+		if (settingsRes.ok) {
+			const data = await settingsRes.json();
 			hasLinearKey = data.hasLinearKey;
+		}
+		if (reposRes.ok) {
+			repos = await reposRes.json();
 		}
 	});
 
-	async function saveSettings() {
+	// --- Linear handlers ---
+	async function saveLinearKey() {
 		if (!linearApiKey) return;
-		saving = true;
-		message = '';
+		linearSaving = true;
+		linearMessage = '';
 		try {
 			const res = await fetch('/api/settings', {
 				method: 'PUT',
@@ -28,17 +50,17 @@
 				const data = await res.json();
 				hasLinearKey = data.hasLinearKey;
 				linearApiKey = '';
-				message = 'Key saved';
+				linearMessage = 'Key saved';
 			} else {
-				message = 'Failed to save';
+				linearMessage = 'Failed to save';
 			}
 		} finally {
-			saving = false;
+			linearSaving = false;
 		}
 	}
 
-	async function clearKey() {
-		saving = true;
+	async function clearLinearKey() {
+		linearSaving = true;
 		try {
 			const res = await fetch('/api/settings', {
 				method: 'PUT',
@@ -48,10 +70,99 @@
 			if (res.ok) {
 				hasLinearKey = false;
 				linearApiKey = '';
-				message = 'Key removed';
+				linearMessage = 'Key removed';
 			}
 		} finally {
-			saving = false;
+			linearSaving = false;
+		}
+	}
+
+	// --- Repo handlers ---
+	function startAddRepo() {
+		editingRepo = null;
+		repoName = '';
+		repoPath = '';
+		repoSetupScript = '';
+		repoServices = [];
+		repoMessage = '';
+		showAddRepo = true;
+	}
+
+	function startEditRepo(repo: RepoSettings) {
+		editingRepo = repo;
+		repoName = repo.name;
+		repoPath = repo.path;
+		repoSetupScript = repo.setupScript ?? '';
+		repoServices = repo.services ? [...repo.services] : [];
+		repoMessage = '';
+		showAddRepo = true;
+	}
+
+	function cancelRepoForm() {
+		showAddRepo = false;
+		editingRepo = null;
+		repoMessage = '';
+	}
+
+	function addService() {
+		repoServices = [...repoServices, { name: '', command: '' }];
+	}
+
+	function removeService(index: number) {
+		repoServices = repoServices.filter((_, i) => i !== index);
+	}
+
+	async function saveRepo() {
+		if (!repoName || !repoPath) {
+			repoMessage = 'Name and path are required';
+			return;
+		}
+		repoSaving = true;
+		repoMessage = '';
+		try {
+			const body = {
+				name: repoName,
+				path: repoPath,
+				setupScript: repoSetupScript || undefined,
+				services: repoServices.filter((s) => s.name && s.command)
+			};
+
+			let res: Response;
+			if (editingRepo) {
+				res = await fetch(`/api/repos/${editingRepo.id}`, {
+					method: 'PATCH',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(body)
+				});
+			} else {
+				res = await fetch('/api/repos', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(body)
+				});
+			}
+
+			if (res.ok) {
+				const saved = (await res.json()) as RepoSettings;
+				if (editingRepo) {
+					repos = repos.map((r) => (r.id === saved.id ? saved : r));
+				} else {
+					repos = [...repos, saved];
+				}
+				showAddRepo = false;
+				editingRepo = null;
+			} else {
+				repoMessage = 'Failed to save';
+			}
+		} finally {
+			repoSaving = false;
+		}
+	}
+
+	async function deleteRepoById(id: string) {
+		const res = await fetch(`/api/repos/${id}`, { method: 'DELETE' });
+		if (res.ok) {
+			repos = repos.filter((r) => r.id !== id);
 		}
 	}
 </script>
@@ -59,15 +170,15 @@
 <div class="space-y-8">
 	<div>
 		<h1 class="text-2xl font-bold">Settings</h1>
-		<p class="mt-1 text-sm text-zinc-400">Configure integrations and preferences</p>
+		<p class="mt-1 text-sm text-zinc-400">Configure integrations and repositories</p>
 	</div>
 
+	<!-- Linear Integration -->
 	<section class="space-y-4 rounded-lg border border-zinc-800 p-6">
 		<div>
 			<h2 class="text-lg font-semibold">Linear Integration</h2>
 			<p class="mt-1 text-sm text-zinc-400">
-				Add your Linear API key to auto-fetch ticket details when creating workstreams. Get a key
-				from
+				Add your Linear API key to auto-fetch ticket details. Get a key from
 				<a
 					href="https://linear.app/settings/api"
 					target="_blank"
@@ -88,7 +199,7 @@
 				/>
 				{#if hasLinearKey}
 					<button
-						onclick={clearKey}
+						onclick={clearLinearKey}
 						class="rounded-md border border-zinc-700 px-3 py-2 text-sm transition hover:bg-zinc-800"
 					>
 						Clear
@@ -102,15 +213,195 @@
 
 		<div class="flex items-center gap-3">
 			<button
-				onclick={saveSettings}
-				disabled={saving}
+				onclick={saveLinearKey}
+				disabled={linearSaving}
 				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
 			>
-				{saving ? 'Saving...' : 'Save'}
+				{linearSaving ? 'Saving...' : 'Save'}
 			</button>
-			{#if message}
-				<span class="text-sm text-zinc-400">{message}</span>
+			{#if linearMessage}
+				<span class="text-sm text-zinc-400">{linearMessage}</span>
 			{/if}
 		</div>
+	</section>
+
+	<!-- Repositories -->
+	<section class="space-y-4 rounded-lg border border-zinc-800 p-6">
+		<div class="flex items-center justify-between">
+			<div>
+				<h2 class="text-lg font-semibold">Repositories</h2>
+				<p class="mt-1 text-sm text-zinc-400">
+					Configure repos with environment setup scripts that run on worktree creation.
+				</p>
+			</div>
+			{#if !showAddRepo}
+				<button
+					onclick={startAddRepo}
+					class="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-500"
+				>
+					Add Repo
+				</button>
+			{/if}
+		</div>
+
+		<!-- Repo list -->
+		{#if repos.length > 0 && !showAddRepo}
+			<div class="space-y-3">
+				{#each repos as repo (repo.id)}
+					<div class="rounded-md border border-zinc-700 p-4">
+						<div class="flex items-start justify-between">
+							<div>
+								<h3 class="font-medium">{repo.name}</h3>
+								<p class="mt-0.5 text-sm text-zinc-400">{repo.path}</p>
+								{#if repo.setupScript}
+									<p class="mt-1 text-xs text-zinc-500">
+										Setup: {repo.setupScript.split('\n').length} line{repo.setupScript.split('\n')
+											.length === 1
+											? ''
+											: 's'}
+									</p>
+								{/if}
+								{#if repo.services && repo.services.length > 0}
+									<p class="mt-0.5 text-xs text-zinc-500">
+										Services: {repo.services.map((s) => s.name).join(', ')}
+									</p>
+								{/if}
+							</div>
+							<div class="flex gap-2">
+								<button
+									onclick={() => startEditRepo(repo)}
+									class="rounded-md border border-zinc-700 px-2.5 py-1 text-xs transition hover:bg-zinc-800"
+								>
+									Edit
+								</button>
+								<button
+									onclick={() => deleteRepoById(repo.id)}
+									class="rounded-md border border-red-800 px-2.5 py-1 text-xs text-red-400 transition hover:bg-red-950"
+								>
+									Remove
+								</button>
+							</div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+
+		{#if repos.length === 0 && !showAddRepo}
+			<p class="text-sm text-zinc-500">No repositories configured yet.</p>
+		{/if}
+
+		<!-- Add/Edit repo form -->
+		{#if showAddRepo}
+			<div class="space-y-4 rounded-md border border-zinc-700 p-4">
+				<h3 class="font-medium">{editingRepo ? 'Edit' : 'Add'} Repository</h3>
+
+				<div class="grid gap-4 sm:grid-cols-2">
+					<div>
+						<label for="repoName" class="block text-sm font-medium text-zinc-300">Name</label>
+						<input
+							id="repoName"
+							type="text"
+							bind:value={repoName}
+							placeholder="e.g. c3-repo"
+							class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+						/>
+					</div>
+					<div>
+						<label for="repoPath" class="block text-sm font-medium text-zinc-300">Path</label>
+						<input
+							id="repoPath"
+							type="text"
+							bind:value={repoPath}
+							placeholder="/Users/you/code/c3-repo"
+							class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+						/>
+					</div>
+				</div>
+
+				<div>
+					<label for="setupScript" class="block text-sm font-medium text-zinc-300"
+						>Setup Script</label
+					>
+					<p class="mt-0.5 text-xs text-zinc-500">
+						Runs in the worktree directory after creation. One command per line.
+					</p>
+					<textarea
+						id="setupScript"
+						bind:value={repoSetupScript}
+						rows={6}
+						placeholder="npm install\nnpm run dev"
+						class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 font-mono text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+					></textarea>
+				</div>
+
+				<!-- Services -->
+				<div>
+					<div class="flex items-center justify-between">
+						<label class="block text-sm font-medium text-zinc-300">Services</label>
+						<button
+							type="button"
+							onclick={addService}
+							class="text-xs text-indigo-400 hover:text-indigo-300"
+						>
+							+ Add Service
+						</button>
+					</div>
+					<p class="mt-0.5 text-xs text-zinc-500">
+						Long-running processes started after setup (e.g. dev server).
+					</p>
+					<!-- eslint-disable-next-line @typescript-eslint/no-unused-vars -->
+					{#each repoServices as svc, i (i)}
+						<div class="mt-2 flex gap-2">
+							<input
+								type="text"
+								bind:value={repoServices[i].name}
+								placeholder="Name (e.g. dev-server)"
+								class="flex-1 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+							/>
+							<input
+								type="text"
+								bind:value={repoServices[i].command}
+								placeholder="Command (e.g. npm run dev)"
+								class="flex-2 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+							/>
+							<input
+								type="number"
+								bind:value={repoServices[i].port}
+								placeholder="Port"
+								class="w-20 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+							/>
+							<button
+								type="button"
+								onclick={() => removeService(i)}
+								class="text-xs text-red-400 hover:text-red-300"
+							>
+								✕
+							</button>
+						</div>
+					{/each}
+				</div>
+
+				{#if repoMessage}
+					<p class="text-sm text-red-400">{repoMessage}</p>
+				{/if}
+
+				<div class="flex gap-2">
+					<button
+						onclick={saveRepo}
+						disabled={repoSaving}
+						class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
+					>
+						{repoSaving ? 'Saving...' : editingRepo ? 'Update' : 'Add'}
+					</button>
+					<button
+						onclick={cancelRepoForm}
+						class="rounded-md border border-zinc-700 px-4 py-2 text-sm transition hover:bg-zinc-800"
+					>
+						Cancel
+					</button>
+				</div>
+			</div>
+		{/if}
 	</section>
 </div>
