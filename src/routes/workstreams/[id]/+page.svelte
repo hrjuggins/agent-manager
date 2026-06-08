@@ -406,6 +406,61 @@
 					{/if}
 				</div>
 
+				<!-- Environment Details (parsed from script output) -->
+				{#if envStatus?.envDetails && Object.keys(envStatus.envDetails).length > 0}
+					<div class="space-y-2">
+						<h3 class="text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+							Environment Details
+						</h3>
+						<div class="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+							<dl class="grid gap-2 sm:grid-cols-2">
+								{#each Object.entries(envStatus.envDetails) as [key, value] (key)}
+									<div class="overflow-hidden">
+										<dt class="text-xs font-medium text-zinc-500">{key}</dt>
+										<dd class="mt-0.5 truncate font-mono text-sm">
+											{#if value.startsWith('http://') || value.startsWith('https://')}
+												<a
+													href={value}
+													target="_blank"
+													rel="noopener"
+													class="text-indigo-400 hover:text-indigo-300 hover:underline"
+												>
+													{value}
+												</a>
+											{:else}
+												<span class="text-zinc-300">{value}</span>
+											{/if}
+										</dd>
+									</div>
+								{/each}
+							</dl>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Script Errors -->
+				{#if envStatus?.errors && envStatus.errors.length > 0}
+					<div class="space-y-2">
+						<h3
+							class="flex items-center gap-2 text-xs font-semibold tracking-wide text-red-400 uppercase"
+						>
+							<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+								/>
+							</svg>
+							Script Issues ({envStatus.errors.length})
+						</h3>
+						<pre
+							class="max-h-48 overflow-auto rounded-lg border border-red-900/50 bg-red-950/20 p-3 font-mono text-xs text-red-300"
+							>{envStatus.errors.join('\n')}</pre
+						>
+					</div>
+				{/if}
+
 				<!-- Setup Log Toggle -->
 				{#if envStatus?.setupLog}
 					<button

@@ -40,6 +40,8 @@ export interface EnvironmentStatus {
 	state: 'stopped' | 'starting' | 'running' | 'error';
 	services: RunningService[];
 	setupLog?: string;
+	envDetails?: Record<string, string>;
+	errors?: string[];
 }
 
 export interface RunningService {

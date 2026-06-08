@@ -17,6 +17,12 @@ const runningProcesses = new Map<string, ManagedProcess[]>();
 // In-memory map of workstream ID → setup log
 const setupLogs = new Map<string, string>();
 
+// In-memory map of workstream ID → parsed env details (key: value from stdout)
+const envDetails = new Map<string, Record<string, string>>();
+
+// In-memory map of workstream ID → error lines from stderr
+const envErrors = new Map<string, string[]>();
+
 export function readRepoConfig(repoPath: string): RepoConfig | null {
 	// Check app settings first (repo configured via Settings UI)
 	const repoSettings = getRepoByPath(repoPath);
@@ -71,14 +77,42 @@ export function runScript(
 		log: []
 	};
 
+	// Initialize storage for this workstream
+	envDetails.set(workstreamId, {});
+	envErrors.set(workstreamId, []);
+
 	child.stdout?.on('data', (data: Buffer) => {
-		mp.log.push(data.toString());
+		const text = data.toString();
+		mp.log.push(text);
 		if (mp.log.length > 100) mp.log.shift();
+
+		// Parse key: value lines from stdout
+		const lines = text.split('\n');
+		const details = envDetails.get(workstreamId) ?? {};
+		for (const line of lines) {
+			const match = line.match(/^([\w\s._-]+):\s+(.+)$/);
+			if (match) {
+				details[match[1].trim()] = match[2].trim();
+			}
+		}
+		envDetails.set(workstreamId, details);
 	});
 
 	child.stderr?.on('data', (data: Buffer) => {
-		mp.log.push(data.toString());
+		const text = data.toString();
+		mp.log.push(text);
 		if (mp.log.length > 100) mp.log.shift();
+
+		// Capture error lines (filter out common noise)
+		const lines = text.split('\n').filter((l) => l.trim());
+		const errors = envErrors.get(workstreamId) ?? [];
+		for (const line of lines) {
+			// Skip common non-error noise (npm warnings, deprecation notices)
+			if (line.includes('npm warn') || line.includes('WARN deprecated')) continue;
+			errors.push(line);
+			if (errors.length > 50) errors.shift();
+		}
+		envErrors.set(workstreamId, errors);
 	});
 
 	runningProcesses.set(workstreamId, [mp]);
@@ -113,9 +147,17 @@ export function stopServices(workstreamId: string): void {
 export function getEnvironmentStatus(workstreamId: string): EnvironmentStatus {
 	const managed = runningProcesses.get(workstreamId);
 	const log = setupLogs.get(workstreamId);
+	const details = envDetails.get(workstreamId);
+	const errors = envErrors.get(workstreamId);
 
 	if (!managed || managed.length === 0) {
-		return { state: 'stopped', services: [], setupLog: log };
+		return {
+			state: 'stopped',
+			services: [],
+			setupLog: log,
+			envDetails: details && Object.keys(details).length > 0 ? details : undefined,
+			errors: errors && errors.length > 0 ? errors : undefined
+		};
 	}
 
 	const services: RunningService[] = managed.map((mp) => {
@@ -134,7 +176,9 @@ export function getEnvironmentStatus(workstreamId: string): EnvironmentStatus {
 	return {
 		state: anyError ? 'error' : allRunning ? 'running' : 'stopped',
 		services,
-		setupLog: log
+		setupLog: log,
+		envDetails: details && Object.keys(details).length > 0 ? details : undefined,
+		errors: errors && errors.length > 0 ? errors : undefined
 	};
 }
 
