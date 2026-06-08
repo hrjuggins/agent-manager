@@ -11,13 +11,17 @@ export interface LinearIssueData {
 
 export function parseLinearUrl(url: string): string | null {
 	// Matches: https://linear.app/<org>/issue/<IDENTIFIER>/...
-	const match = url.match(/linear\.app\/[^/]+\/issue\/([A-Z]+-\d+)/i);
-	return match?.[1] ?? null;
+	const match = url.match(/linear\.app\/[^/]+\/issue\/([A-Za-z]+-\d+)/i);
+	if (!match) return null;
+	// Linear identifiers are uppercase (e.g. PRO-860)
+	return match[1].toUpperCase();
 }
 
-export async function fetchLinearIssue(identifier: string): Promise<LinearIssueData | null> {
+export async function fetchLinearIssue(
+	identifier: string
+): Promise<{ data: LinearIssueData | null; error?: string }> {
 	const apiKey = getLinearApiKey();
-	if (!apiKey) return null;
+	if (!apiKey) return { data: null, error: 'No API key configured' };
 
 	const query = `{
 		issue(id: "${identifier}") {
@@ -40,7 +44,9 @@ export async function fetchLinearIssue(identifier: string): Promise<LinearIssueD
 			body: JSON.stringify({ query })
 		});
 
-		if (!res.ok) return null;
+		if (!res.ok) {
+			return { data: null, error: `Linear API returned ${res.status}` };
+		}
 
 		const json = (await res.json()) as {
 			data?: {
@@ -53,20 +59,27 @@ export async function fetchLinearIssue(identifier: string): Promise<LinearIssueD
 					priorityLabel?: string;
 				};
 			};
+			errors?: Array<{ message: string }>;
 		};
+
+		if (json.errors?.length) {
+			return { data: null, error: json.errors[0].message };
+		}
 
 		const issue = json.data?.issue;
-		if (!issue) return null;
+		if (!issue) return { data: null, error: `No issue found for "${identifier}"` };
 
 		return {
-			identifier: issue.identifier,
-			title: issue.title,
-			url: issue.url,
-			status: issue.state?.name ?? 'Unknown',
-			assignee: issue.assignee?.name,
-			priority: issue.priorityLabel
+			data: {
+				identifier: issue.identifier,
+				title: issue.title,
+				url: issue.url,
+				status: issue.state?.name ?? 'Unknown',
+				assignee: issue.assignee?.name,
+				priority: issue.priorityLabel
+			}
 		};
-	} catch {
-		return null;
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : 'Unknown error' };
 	}
 }

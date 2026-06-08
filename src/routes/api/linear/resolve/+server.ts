@@ -11,18 +11,21 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const { url, identifier } = (await request.json()) as { url?: string; identifier?: string };
 
-	let issueId = identifier;
+	let issueId = identifier?.toUpperCase();
 	if (!issueId && url) {
 		issueId = parseLinearUrl(url) ?? undefined;
 	}
 	if (!issueId) {
-		throw error(400, 'Could not extract issue identifier from URL');
+		throw error(
+			400,
+			`Could not extract issue identifier from input. Expected a URL like https://linear.app/team/issue/PRJ-123/... or an ID like PRJ-123. Got: ${url || identifier || '(empty)'}`
+		);
 	}
 
-	const issue = await fetchLinearIssue(issueId);
-	if (!issue) {
-		throw error(404, `Linear issue ${issueId} not found`);
+	const result = await fetchLinearIssue(issueId);
+	if (!result.data) {
+		throw error(404, result.error || `Linear issue ${issueId} not found`);
 	}
 
-	return json(issue);
+	return json(result.data);
 };
