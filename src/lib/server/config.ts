@@ -70,7 +70,6 @@ export function createRepo(data: {
 	name: string;
 	path: string;
 	setupScript?: string;
-	basePort?: number;
 }): RepoSettings {
 	const config = readConfig();
 	const repo: RepoSettings = { id: randomUUID(), ...data };

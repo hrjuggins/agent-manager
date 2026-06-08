@@ -17,7 +17,6 @@
 	let repoName = $state('');
 	let repoPath = $state('');
 	let repoSetupScript = $state('');
-	let repoBasePort = $state(3000);
 	let repoSaving = $state(false);
 	let repoMessage = $state('');
 
@@ -83,7 +82,6 @@
 		repoName = '';
 		repoPath = '';
 		repoSetupScript = '';
-		repoBasePort = 3000;
 		repoMessage = '';
 		showAddRepo = true;
 	}
@@ -93,7 +91,6 @@
 		repoName = repo.name;
 		repoPath = repo.path;
 		repoSetupScript = repo.setupScript ?? '';
-		repoBasePort = repo.basePort ?? 3000;
 		repoMessage = '';
 		showAddRepo = true;
 	}
@@ -115,8 +112,7 @@
 			const body = {
 				name: repoName,
 				path: repoPath,
-				setupScript: repoSetupScript || undefined,
-				basePort: repoBasePort || 3000
+				setupScript: repoSetupScript || undefined
 			};
 
 			let res: Response;
@@ -223,7 +219,7 @@
 			<div>
 				<h2 class="text-lg font-semibold">Repositories</h2>
 				<p class="mt-1 text-sm text-zinc-400">
-					Configure repos with setup scripts. Ports are auto-assigned per workstream.
+					Configure repos with setup scripts that run when creating a new workstream.
 				</p>
 			</div>
 			{#if !showAddRepo}
@@ -247,16 +243,13 @@
 								<p class="mt-0.5 text-sm text-zinc-400">{repo.path}</p>
 								{#if repo.setupScript}
 									<p class="mt-1 text-xs text-zinc-500">
-										Setup: {repo.setupScript.split('\n').filter((l) => l.trim()).length} line{repo.setupScript
+										Script: {repo.setupScript.split('\n').filter((l) => l.trim()).length} line{repo.setupScript
 											.split('\n')
 											.filter((l) => l.trim()).length === 1
 											? ''
 											: 's'}
 									</p>
 								{/if}
-								<p class="mt-0.5 text-xs text-zinc-500">
-									Base port: {repo.basePort ?? 3000}
-								</p>
 							</div>
 							<div class="flex gap-2">
 								<button
@@ -315,32 +308,19 @@
 						>Setup Script</label
 					>
 					<p class="mt-0.5 text-xs text-zinc-500">
-						One command per line. Commands run in order — the last line runs as a long-running
-						service (e.g. dev server). Use <code class="text-zinc-400">$PORT</code> to reference the auto-assigned
-						port.
+						One command per line. The entire script runs when a workstream is created.
+						Include dependency installs, dev servers, and port assignments directly in the
+						script.
 					</p>
 					<textarea
 						id="setupScript"
 						bind:value={repoSetupScript}
 						rows={4}
-						placeholder="npm install\nnpm run dev -- --port $PORT"
+						placeholder="npm install\nnpm run dev -- --port 4001"
 						class="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 font-mono text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
 					></textarea>
 				</div>
 
-				<div>
-					<label for="basePort" class="block text-sm font-medium text-zinc-300">Base Port</label>
-					<p class="mt-0.5 text-xs text-zinc-500">
-						Starting port number. Each new workstream auto-increments from here.
-					</p>
-					<input
-						id="basePort"
-						type="number"
-						bind:value={repoBasePort}
-						placeholder="3000"
-						class="mt-1 w-24 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-					/>
-				</div>
 
 				{#if repoMessage}
 					<p class="text-sm text-red-400">{repoMessage}</p>

@@ -2,14 +2,11 @@ import { json, error } from '@sveltejs/kit';
 import { getWorkstream, updateWorkstream } from '$lib/server/store';
 import { createWorktree, removeWorktree } from '$lib/server/worktree';
 import {
-	runSetup,
-	startService,
+	runScript,
 	stopServices,
 	getEnvironmentStatus,
-	readRepoConfig,
-	getNextPort
+	readRepoConfig
 } from '$lib/server/environment';
-import { getRepoByPath } from '$lib/server/config';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params }) => {
@@ -44,32 +41,10 @@ export const POST: RequestHandler = async ({ params, request }) => {
 				updateWorkstream(params.id, { worktreePath: cwd });
 			}
 
-			// Run setup commands
+			// Run the setup script
 			const config = readRepoConfig(workstream.repoPath);
-			if (config?.setup) {
-				const setupResult = await runSetup(params.id, cwd, workstream.repoPath);
-				if (!setupResult.success) {
-					updateWorkstream(params.id, {
-						environment: { state: 'error', services: [], setupLog: setupResult.log }
-					});
-					return json({
-						success: false,
-						message: 'Setup failed',
-						log: setupResult.log
-					});
-				}
-			}
-
-			// Auto-assign port if not already assigned, then start service
-			let port = workstream.assignedPort;
-			if (config?.serviceCommand) {
-				if (!port) {
-					const repoSettings = getRepoByPath(workstream.repoPath);
-					const basePort = repoSettings?.basePort ?? 3000;
-					port = getNextPort(workstream.repoPath, basePort);
-					updateWorkstream(params.id, { assignedPort: port });
-				}
-				startService(params.id, cwd, workstream.repoPath, port);
+			if (config?.setup && config.setup.length > 0) {
+				runScript(params.id, cwd, workstream.repoPath);
 			}
 
 			const envStatus = getEnvironmentStatus(params.id);
@@ -77,7 +52,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
 			return json({
 				success: true,
-				message: `Environment started${port ? ` on port ${port}` : ''}`,
+				message: 'Environment started',
 				environment: envStatus
 			});
 		}
@@ -96,8 +71,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 				removeWorktree(workstream.repoPath, workstream.worktreePath);
 				updateWorkstream(params.id, {
 					worktreePath: undefined,
-					environment: undefined,
-					assignedPort: undefined
+					environment: undefined
 				});
 			}
 			return json({ success: true, message: 'Environment torn down' });

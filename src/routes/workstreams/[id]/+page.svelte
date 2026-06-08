@@ -404,20 +404,6 @@
 							</p>
 						</div>
 					{/if}
-					{#if data.workstream.assignedPort}
-						<div class="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-							<span class="text-xs font-semibold tracking-wide text-zinc-500 uppercase">Port</span>
-							<p class="mt-1 font-mono text-sm text-indigo-400">
-								<a
-									href="http://localhost:{data.workstream.assignedPort}"
-									target="_blank"
-									class="hover:text-indigo-300"
-								>
-									:{data.workstream.assignedPort}
-								</a>
-							</p>
-						</div>
-					{/if}
 				</div>
 
 				<!-- Setup Log Toggle -->

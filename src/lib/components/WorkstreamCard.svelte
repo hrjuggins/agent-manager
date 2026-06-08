@@ -36,9 +36,6 @@
 				{#if workstream.linearTicket}
 					<span class="text-indigo-400">{workstream.linearTicket.id}</span>
 				{/if}
-				{#if workstream.assignedPort}
-					<span class="text-indigo-400">:{workstream.assignedPort}</span>
-				{/if}
 			</div>
 		</div>
 		<div class="flex shrink-0 gap-1">

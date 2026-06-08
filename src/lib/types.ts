@@ -13,7 +13,6 @@ export interface Workstream {
 	pullRequest?: PullRequest;
 	notes?: string;
 	environment?: EnvironmentStatus;
-	assignedPort?: number;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -53,7 +52,6 @@ export interface RunningService {
 
 export interface RepoConfig {
 	setup?: string[];
-	serviceCommand?: string;
 }
 
 export interface RepoSettings {
@@ -61,7 +59,6 @@ export interface RepoSettings {
 	name: string;
 	path: string;
 	setupScript?: string;
-	basePort?: number;
 }
 
 export type WorkstreamCreate = Omit<Workstream, 'id' | 'createdAt' | 'updatedAt'>;
