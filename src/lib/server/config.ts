@@ -32,6 +32,19 @@ export function writeConfig(config: AppConfig): void {
 	writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
 }
 
+function isValidApiKey(key: string): boolean {
+	// API keys must be ASCII-only (no masked bullet chars, etc.)
+	return /^[\x20-\x7E]+$/.test(key);
+}
+
 export function getLinearApiKey(): string | undefined {
-	return readConfig().linearApiKey || undefined;
+	const key = readConfig().linearApiKey;
+	if (!key || !isValidApiKey(key)) return undefined;
+	return key;
+}
+
+export function validateLinearApiKey(key: string): string | null {
+	if (!key) return 'Key is empty';
+	if (!isValidApiKey(key)) return 'Key contains invalid characters — re-enter your real API key';
+	return null;
 }

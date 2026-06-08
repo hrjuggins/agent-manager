@@ -21,7 +21,11 @@ export async function fetchLinearIssue(
 	identifier: string
 ): Promise<{ data: LinearIssueData | null; error?: string }> {
 	const apiKey = getLinearApiKey();
-	if (!apiKey) return { data: null, error: 'No API key configured' };
+	if (!apiKey)
+		return {
+			data: null,
+			error: 'No valid API key configured. Go to Settings and re-enter your Linear API key.'
+		};
 
 	const query = `{
 		issue(id: "${identifier}") {

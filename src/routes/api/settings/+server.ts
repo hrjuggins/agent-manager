@@ -1,5 +1,5 @@
-import { json } from '@sveltejs/kit';
-import { readConfig, writeConfig } from '$lib/server/config';
+import { json, error } from '@sveltejs/kit';
+import { readConfig, writeConfig, validateLinearApiKey } from '$lib/server/config';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
@@ -16,6 +16,8 @@ export const PUT: RequestHandler = async ({ request }) => {
 	if (data.clearKey) {
 		config.linearApiKey = undefined;
 	} else if (data.linearApiKey) {
+		const validationError = validateLinearApiKey(data.linearApiKey);
+		if (validationError) throw error(400, validationError);
 		config.linearApiKey = data.linearApiKey;
 	}
 
