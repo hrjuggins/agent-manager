@@ -10,12 +10,12 @@
 		const res = await fetch('/api/settings');
 		if (res.ok) {
 			const data = await res.json();
-			linearApiKey = data.linearApiKey;
 			hasLinearKey = data.hasLinearKey;
 		}
 	});
 
 	async function saveSettings() {
+		if (!linearApiKey) return;
 		saving = true;
 		message = '';
 		try {
@@ -27,13 +27,8 @@
 			if (res.ok) {
 				const data = await res.json();
 				hasLinearKey = data.hasLinearKey;
-				message = 'Settings saved';
-				// Re-fetch to get masked key
-				const refresh = await fetch('/api/settings');
-				if (refresh.ok) {
-					const refreshData = await refresh.json();
-					linearApiKey = refreshData.linearApiKey;
-				}
+				linearApiKey = '';
+				message = 'Key saved';
 			} else {
 				message = 'Failed to save';
 			}
@@ -42,8 +37,22 @@
 		}
 	}
 
-	function clearKey() {
-		linearApiKey = '';
+	async function clearKey() {
+		saving = true;
+		try {
+			const res = await fetch('/api/settings', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ clearKey: true })
+			});
+			if (res.ok) {
+				hasLinearKey = false;
+				linearApiKey = '';
+				message = 'Key removed';
+			}
+		} finally {
+			saving = false;
+		}
 	}
 </script>
 
@@ -74,7 +83,7 @@
 					id="linearApiKey"
 					type="text"
 					bind:value={linearApiKey}
-					placeholder="lin_api_..."
+					placeholder={hasLinearKey ? 'Key configured — enter new key to replace' : 'lin_api_...'}
 					class="flex-1 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
 				/>
 				{#if hasLinearKey}
