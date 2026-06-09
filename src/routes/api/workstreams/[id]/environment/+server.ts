@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import { getWorkstream, updateWorkstream } from '$lib/server/store';
 import { removeWorktree } from '$lib/server/worktree';
-import { openTerminalWithSetup } from '$lib/server/environment';
+import { openTerminal } from '$lib/server/environment';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ params, request }) => {
@@ -16,7 +16,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 				throw error(400, 'No repository path configured');
 			}
 			const cwd = workstream.worktreePath || workstream.repoPath;
-			const result = openTerminalWithSetup(workstream.repoPath, cwd);
+			const result = openTerminal(cwd);
 			return json(result);
 		}
 

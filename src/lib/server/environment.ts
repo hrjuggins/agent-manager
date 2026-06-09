@@ -84,10 +84,24 @@ end tell`;
 }
 
 /**
- * Write a temporary setup script to disk and open it in the configured terminal.
- * The script runs in the worktree directory with PORT_OFFSET set.
+ * Open a terminal in the given directory (no setup script).
+ * Used by the "Open Terminal" button.
  */
-export function openTerminalWithSetup(
+export function openTerminal(cwd: string): { success: boolean; message: string } {
+	const terminalApp = getTerminalApp();
+	try {
+		runInTerminal(terminalApp, `cd '${cwd.replace(/'/g, "'\\''")}'`);
+	} catch {
+		return { success: false, message: `Failed to open ${terminalApp}` };
+	}
+	return { success: true, message: `Opened ${terminalApp} in ${cwd}` };
+}
+
+/**
+ * Write a temporary setup script to disk and run it in the configured terminal.
+ * Used on workstream creation to bootstrap the environment.
+ */
+export function runSetupInTerminal(
 	repoPath: string,
 	cwd: string
 ): { success: boolean; message: string } {
@@ -95,13 +109,7 @@ export function openTerminalWithSetup(
 	const terminalApp = getTerminalApp();
 
 	if (!config?.setup || config.setup.length === 0) {
-		// No setup script — just open terminal in the worktree directory
-		try {
-			runInTerminal(terminalApp, `cd '${cwd.replace(/'/g, "'\\''")}'`);
-		} catch {
-			return { success: false, message: `Failed to open ${terminalApp}` };
-		}
-		return { success: true, message: `Opened ${terminalApp} in worktree directory` };
+		return { success: true, message: 'No setup script configured' };
 	}
 
 	const script = config.setup.join('\n');

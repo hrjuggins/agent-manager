@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { listWorkstreams, createWorkstream, updateWorkstream } from '$lib/server/store';
 import { createWorktree } from '$lib/server/worktree';
-import { openTerminalWithSetup, readRepoConfig } from '$lib/server/environment';
+import { runSetupInTerminal, readRepoConfig } from '$lib/server/environment';
 import type { WorkstreamCreate } from '$lib/types';
 import type { RequestHandler } from './$types';
 
@@ -29,7 +29,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			// Open terminal with setup script if one is configured
 			const config = readRepoConfig(workstream.repoPath);
 			if (config?.setup && config.setup.length > 0) {
-				openTerminalWithSetup(workstream.repoPath, cwd);
+				runSetupInTerminal(workstream.repoPath, cwd);
 			}
 		} else {
 			updateWorkstream(workstream.id, {
