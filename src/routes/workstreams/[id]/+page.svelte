@@ -1,53 +1,18 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import WorkstreamForm from '$lib/components/WorkstreamForm.svelte';
-	import type { WorkstreamUpdate, EnvironmentStatus } from '$lib/types';
+	import type { WorkstreamUpdate } from '$lib/types';
 
 	let { data } = $props();
 	let editing = $state(false);
 	let confirmingDelete = $state(false);
-	let envLoading = $state(false);
-	let envStatus = $state<EnvironmentStatus | null>(data.workstream.environment ?? null);
-	let showSetupLog = $state(false);
-	let pollTimer: ReturnType<typeof setInterval> | null = null;
+	let terminalLoading = $state(false);
 
-	// Auto-poll when environment is starting or running without env details yet
+	// Auto-sync Linear ticket on mount
 	onMount(() => {
-		if (
-			envStatus?.state === 'starting' ||
-			(envStatus?.state === 'running' && !envStatus?.envDetails)
-		) {
-			startPolling();
-		}
+		refreshLinearTicket();
 	});
-
-	onDestroy(() => {
-		stopPolling();
-	});
-
-	function startPolling() {
-		stopPolling();
-		pollTimer = setInterval(async () => {
-			await refreshEnvironment();
-			// Stop polling once we have a terminal state with env details populated
-			const settled =
-				envStatus?.state !== 'starting' &&
-				(envStatus?.state !== 'running' ||
-					(envStatus?.envDetails && Object.keys(envStatus.envDetails).length > 0));
-			if (settled) {
-				stopPolling();
-				invalidateAll();
-			}
-		}, 3000);
-	}
-
-	function stopPolling() {
-		if (pollTimer) {
-			clearInterval(pollTimer);
-			pollTimer = null;
-		}
-	}
 
 	async function launch(action: string) {
 		const res = await fetch(`/api/workstreams/${data.workstream.id}/launch`, {
@@ -86,38 +51,34 @@
 		goto('/');
 	}
 
-	async function environmentAction(action: 'start' | 'stop' | 'teardown') {
-		envLoading = true;
+	async function openTerminal() {
+		terminalLoading = true;
 		try {
 			const res = await fetch(`/api/workstreams/${data.workstream.id}/environment`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ action })
+				body: JSON.stringify({ action: 'open-terminal' })
 			});
 			const result = await res.json();
-			if (result.environment) {
-				envStatus = result.environment;
-			} else {
-				envStatus = null;
-			}
 			if (!result.success) {
-				alert(result.message || 'Environment action failed');
+				alert(result.message || 'Failed to open terminal');
 			}
-			// Start polling after launching environment
-			if (action === 'start') {
-				startPolling();
-			}
-			invalidateAll();
 		} finally {
-			envLoading = false;
+			terminalLoading = false;
 		}
 	}
 
-	async function refreshEnvironment() {
-		const res = await fetch(`/api/workstreams/${data.workstream.id}/environment`);
-		if (res.ok) {
-			envStatus = await res.json();
+	async function teardown() {
+		const res = await fetch(`/api/workstreams/${data.workstream.id}/environment`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ action: 'teardown' })
+		});
+		const result = await res.json();
+		if (!result.success) {
+			alert(result.message || 'Teardown failed');
 		}
+		invalidateAll();
 	}
 
 	let linearRefreshing = $state(false);
@@ -236,7 +197,7 @@
 	{#if editing}
 		<WorkstreamForm workstream={data.workstream} onsubmit={handleUpdate} />
 	{:else}
-		<!-- Launch Actions -->
+		<!-- Quick Launch -->
 		<section class="space-y-3">
 			<h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">Quick Launch</h2>
 			<div class="flex flex-wrap gap-2">
@@ -254,6 +215,21 @@
 						/>
 					</svg>
 					Open IDE
+				</button>
+				<button
+					onclick={openTerminal}
+					disabled={!data.workstream.repoPath || terminalLoading}
+					class="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+				>
+					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+						/>
+					</svg>
+					{terminalLoading ? 'Opening...' : 'Open Terminal'}
 				</button>
 				<button
 					onclick={() => launch('browser')}
@@ -288,129 +264,40 @@
 			</div>
 		</section>
 
-		<!-- Environment -->
-		{#if data.workstream.repoPath}
+		<!-- Worktree -->
+		{#if data.workstream.worktreePath || data.workstream.repoPath}
 			<section class="space-y-3">
 				<div class="flex items-center justify-between">
-					<h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">Environment</h2>
-					<div class="flex items-center gap-2">
-						{#if envStatus?.state === 'running'}
-							<span class="flex items-center gap-1.5 text-xs text-green-600">
-								<span class="inline-block h-2 w-2 animate-pulse rounded-full bg-green-500"></span>
-								Running
-							</span>
-						{:else if envStatus?.state === 'error'}
-							<span class="flex items-center gap-1.5 text-xs text-red-600">
-								<span class="inline-block h-2 w-2 rounded-full bg-red-500"></span>
-								Error
-							</span>
-						{:else if envStatus?.state === 'starting'}
-							<span class="flex items-center gap-1.5 text-xs text-amber-600">
-								<span class="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-500"></span>
-								Starting
-							</span>
-						{:else}
-							<span class="text-xs text-gray-400">Stopped</span>
-						{/if}
-					</div>
-				</div>
-
-				<div class="flex flex-wrap gap-2">
-					{#if !envStatus || envStatus.state === 'stopped' || envStatus.state === 'error'}
-						<button
-							onclick={() => environmentAction('start')}
-							disabled={envLoading}
-							class="flex items-center gap-2 rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700 transition hover:bg-green-100 disabled:opacity-50"
-						>
-							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-								/>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-								/>
-							</svg>
-							{envLoading ? 'Starting...' : 'Start Environment'}
-						</button>
-					{:else}
-						<button
-							onclick={() => environmentAction('stop')}
-							disabled={envLoading}
-							class="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:opacity-50"
-						>
-							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-								/>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
-								/>
-							</svg>
-							Stop
-						</button>
-					{/if}
+					<h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">Workspace</h2>
 					{#if data.workstream.worktreePath}
 						<button
-							onclick={() => environmentAction('teardown')}
-							disabled={envLoading}
-							class="flex items-center gap-2 rounded-md border border-red-300 px-3 py-2 text-sm text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+							onclick={teardown}
+							class="rounded-md border border-red-300 px-2.5 py-1 text-xs text-red-600 transition hover:bg-red-50"
 						>
-							Teardown
+							Teardown Worktree
 						</button>
 					{/if}
 				</div>
-
-				<!-- Environment Details (parsed from script output) -->
-				{#if envStatus?.envDetails && Object.keys(envStatus.envDetails).length > 0}
-					<div class="space-y-2">
-						<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
-							Environment Details
-						</h3>
-						<div class="rounded-lg border border-gray-200 bg-white p-3">
-							<dl class="grid gap-2 sm:grid-cols-2">
-								{#each Object.entries(envStatus.envDetails) as [key, value] (key)}
-									<div class="overflow-hidden">
-										<dt class="text-xs font-medium text-gray-500">{key}</dt>
-										<dd class="mt-0.5 truncate font-mono text-sm">
-											{#if value.startsWith('http://') || value.startsWith('https://')}
-												<a
-													href={value}
-													target="_blank"
-													rel="noopener"
-													class="text-indigo-600 hover:text-indigo-500 hover:underline"
-												>
-													{value}
-												</a>
-											{:else}
-												<span class="text-gray-700">{value}</span>
-											{/if}
-										</dd>
-									</div>
-								{/each}
-							</dl>
+				<div class="grid gap-3 sm:grid-cols-2">
+					{#if data.workstream.repoPath}
+						<div class="rounded-lg border border-gray-200 bg-white p-4">
+							<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+								Repository
+							</h3>
+							<p class="mt-1 truncate font-mono text-sm text-gray-700">
+								{data.workstream.repoPath}
+							</p>
 						</div>
-					</div>
-				{/if}
-
-				<!-- Worktree Path -->
-				<div class="flex flex-wrap gap-3">
+					{/if}
+					{#if data.workstream.branch}
+						<div class="rounded-lg border border-gray-200 bg-white p-4">
+							<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Branch</h3>
+							<p class="mt-1 font-mono text-sm text-gray-700">{data.workstream.branch}</p>
+						</div>
+					{/if}
 					{#if data.workstream.worktreePath}
-						<div class="flex-1 rounded-lg border border-gray-200 bg-white p-3">
-							<span class="text-xs font-semibold tracking-wide text-gray-500 uppercase"
-								>Worktree</span
-							>
+						<div class="rounded-lg border border-gray-200 bg-white p-4 sm:col-span-2">
+							<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Worktree</h3>
 							<p class="mt-1 truncate font-mono text-xs text-gray-500">
 								{data.workstream.worktreePath}
 							</p>
@@ -418,85 +305,53 @@
 					{/if}
 				</div>
 
-				<!-- Script Errors -->
-				{#if envStatus?.errors && envStatus.errors.length > 0}
-					<div class="space-y-2">
-						<h3
-							class="flex items-center gap-2 text-xs font-semibold tracking-wide text-red-600 uppercase"
-						>
-							<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-								/>
-							</svg>
-							Script Issues ({envStatus.errors.length})
-						</h3>
-						<pre
-							class="max-h-48 overflow-auto rounded-lg border border-red-200 bg-red-50 p-3 font-mono text-xs text-red-700">{envStatus.errors.join(
-								'\n'
-							)}</pre>
-					</div>
-				{/if}
-
-				<!-- Live Setup Log -->
-				{#if envStatus?.setupLog}
-					<div class="space-y-2">
-						{#if envStatus.state === 'starting' || envStatus.state === 'running'}
-							<h3
-								class="flex items-center gap-2 text-xs font-semibold tracking-wide text-gray-500 uppercase"
-							>
-								<span class="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-500"></span>
-								Setup Log
-							</h3>
-							<pre
-								class="max-h-64 overflow-auto rounded-lg border border-gray-800 bg-gray-900 p-3 font-mono text-xs text-green-400">{envStatus.setupLog}</pre>
-						{:else}
-							<button
-								onclick={() => (showSetupLog = !showSetupLog)}
-								class="text-xs text-gray-400 hover:text-gray-600"
-							>
-								{showSetupLog ? 'Hide' : 'Show'} setup log
-							</button>
-							{#if showSetupLog}
-								<pre
-									class="max-h-48 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-3 font-mono text-xs text-gray-600">{envStatus.setupLog}</pre>
-							{/if}
-						{/if}
+				<!-- Error from worktree creation -->
+				{#if data.workstream.environment?.state === 'error' && data.workstream.environment?.setupLog}
+					<div
+						class="rounded-lg border border-red-200 bg-red-50 p-3 font-mono text-xs text-red-700"
+					>
+						{data.workstream.environment.setupLog}
 					</div>
 				{/if}
 			</section>
 		{/if}
 
-		<!-- Details -->
-		<section class="grid gap-4 sm:grid-cols-2">
-			{#if data.workstream.repoPath}
-				<div class="rounded-lg border border-gray-200 bg-white p-4">
-					<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Repository</h3>
-					<p class="mt-1 truncate font-mono text-sm text-gray-700">{data.workstream.repoPath}</p>
+		<!-- Links -->
+		{#if data.workstream.browserUrl || data.workstream.aiChatUrl}
+			<section class="space-y-3">
+				<h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">Links</h2>
+				<div class="grid gap-3 sm:grid-cols-2">
+					{#if data.workstream.browserUrl}
+						<div class="rounded-lg border border-gray-200 bg-white p-4">
+							<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+								Browser URL
+							</h3>
+							<a
+								href={data.workstream.browserUrl}
+								target="_blank"
+								rel="noopener"
+								class="mt-1 block truncate text-sm text-indigo-600 hover:text-indigo-500 hover:underline"
+							>
+								{data.workstream.browserUrl}
+							</a>
+						</div>
+					{/if}
+					{#if data.workstream.aiChatUrl}
+						<div class="rounded-lg border border-gray-200 bg-white p-4">
+							<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">AI Chat</h3>
+							<a
+								href={data.workstream.aiChatUrl}
+								target="_blank"
+								rel="noopener"
+								class="mt-1 block truncate text-sm text-indigo-600 hover:text-indigo-500 hover:underline"
+							>
+								{data.workstream.aiChatUrl}
+							</a>
+						</div>
+					{/if}
 				</div>
-			{/if}
-			{#if data.workstream.branch}
-				<div class="rounded-lg border border-gray-200 bg-white p-4">
-					<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Branch</h3>
-					<p class="mt-1 font-mono text-sm text-gray-700">{data.workstream.branch}</p>
-				</div>
-			{/if}
-			{#if data.workstream.browserUrl}
-				<div class="rounded-lg border border-gray-200 bg-white p-4">
-					<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Browser URL</h3>
-					<p class="mt-1 truncate text-sm text-indigo-600">{data.workstream.browserUrl}</p>
-				</div>
-			{/if}
-			{#if data.workstream.aiChatUrl}
-				<div class="rounded-lg border border-gray-200 bg-white p-4">
-					<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">AI Chat</h3>
-					<p class="mt-1 truncate text-sm text-indigo-600">{data.workstream.aiChatUrl}</p>
-				</div>
-			{/if}
-		</section>
+			</section>
+		{/if}
 
 		<!-- External Info -->
 		{#if data.workstream.linearTicket || data.workstream.pullRequest}
