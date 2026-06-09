@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { getRepoByPath } from '$lib/server/config';
+import { listWorktrees } from '$lib/server/worktree';
 import type { RepoConfig, EnvironmentStatus, RunningService } from '$lib/types';
 
 interface ManagedProcess {
@@ -48,11 +49,7 @@ export function readRepoConfig(repoPath: string): RepoConfig | null {
 	}
 }
 
-export function runScript(
-	workstreamId: string,
-	cwd: string,
-	repoPath: string
-): RunningService[] {
+export function runScript(workstreamId: string, cwd: string, repoPath: string): RunningService[] {
 	// Stop any existing processes first
 	stopServices(workstreamId);
 
@@ -78,11 +75,19 @@ export function runScript(
 		}
 	}
 
+	// Calculate port offset from number of existing worktrees
+	// Index 0 is the main repo, so the first worktree gets offset 1
+	// Use case-insensitive comparison for macOS (APFS is case-insensitive)
+	const worktrees = listWorktrees(repoPath);
+	const cwdLower = cwd.toLowerCase();
+	const worktreeIndex = worktrees.findIndex((w) => w.toLowerCase() === cwdLower);
+	const portOffset = worktreeIndex >= 0 ? worktreeIndex : worktrees.length;
+
 	const child = spawn(shell, ['-c', script], {
 		cwd,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		detached: true,
-		env: { ...process.env } as Record<string, string>
+		env: { ...process.env, PORT_OFFSET: String(portOffset) } as Record<string, string>
 	});
 
 	const mp: ManagedProcess = {
