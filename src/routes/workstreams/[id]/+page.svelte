@@ -103,6 +103,10 @@
 			if (!result.success) {
 				alert(result.message || 'Environment action failed');
 			}
+			// Start polling after launching environment
+			if (action === 'start') {
+				startPolling();
+			}
 			invalidateAll();
 		} finally {
 			envLoading = false;
@@ -356,12 +360,6 @@
 							</svg>
 							Stop
 						</button>
-						<button
-							onclick={() => refreshEnvironment()}
-							class="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm transition hover:bg-gray-50"
-						>
-							Refresh
-						</button>
 					{/if}
 					{#if data.workstream.worktreePath}
 						<button
@@ -443,18 +441,31 @@
 					</div>
 				{/if}
 
-				<!-- Setup Log Toggle -->
+				<!-- Live Setup Log -->
 				{#if envStatus?.setupLog}
-					<button
-						onclick={() => (showSetupLog = !showSetupLog)}
-						class="text-xs text-gray-400 hover:text-gray-600"
-					>
-						{showSetupLog ? 'Hide' : 'Show'} setup log
-					</button>
-					{#if showSetupLog}
-						<pre
-							class="max-h-48 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-3 font-mono text-xs text-gray-600">{envStatus.setupLog}</pre>
-					{/if}
+					<div class="space-y-2">
+						{#if envStatus.state === 'starting' || envStatus.state === 'running'}
+							<h3
+								class="flex items-center gap-2 text-xs font-semibold tracking-wide text-gray-500 uppercase"
+							>
+								<span class="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-500"></span>
+								Setup Log
+							</h3>
+							<pre
+								class="max-h-64 overflow-auto rounded-lg border border-gray-800 bg-gray-900 p-3 font-mono text-xs text-green-400">{envStatus.setupLog}</pre>
+						{:else}
+							<button
+								onclick={() => (showSetupLog = !showSetupLog)}
+								class="text-xs text-gray-400 hover:text-gray-600"
+							>
+								{showSetupLog ? 'Hide' : 'Show'} setup log
+							</button>
+							{#if showSetupLog}
+								<pre
+									class="max-h-48 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-3 font-mono text-xs text-gray-600">{envStatus.setupLog}</pre>
+							{/if}
+						{/if}
+					</div>
 				{/if}
 			</section>
 		{/if}

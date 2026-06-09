@@ -1,9 +1,12 @@
-import { spawn, type ChildProcess } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
+import { spawn, execSync, type ChildProcess } from 'child_process';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { homedir } from 'os';
 import { getRepoByPath } from '$lib/server/config';
 import { listWorktrees } from '$lib/server/worktree';
 import type { RepoConfig, EnvironmentStatus, RunningService } from '$lib/types';
+
+const PID_FILE = join(homedir(), '.workstream-hub', 'running-pids.json');
 
 interface ManagedProcess {
 	process: ChildProcess;
@@ -14,9 +17,6 @@ interface ManagedProcess {
 
 // In-memory map of workstream ID → managed processes
 const runningProcesses = new Map<string, ManagedProcess[]>();
-
-// In-memory map of workstream ID → setup log
-const setupLogs = new Map<string, string>();
 
 // In-memory map of workstream ID → parsed env details (key: value from stdout)
 const envDetails = new Map<string, Record<string, string>>();
@@ -136,6 +136,7 @@ export function runScript(workstreamId: string, cwd: string, repoPath: string): 
 	});
 
 	runningProcesses.set(workstreamId, [mp]);
+	savePids();
 	return [
 		{
 			name: 'setup',
@@ -162,19 +163,22 @@ export function stopServices(workstreamId: string): void {
 	}
 
 	runningProcesses.delete(workstreamId);
+	savePids();
 }
 
 export function getEnvironmentStatus(workstreamId: string): EnvironmentStatus {
 	const managed = runningProcesses.get(workstreamId);
-	const log = setupLogs.get(workstreamId);
 	const details = envDetails.get(workstreamId);
 	const errors = envErrors.get(workstreamId);
+
+	// Build live log from managed process buffer
+	const liveLog = managed?.map((mp) => mp.log.join('')).join('') || undefined;
 
 	if (!managed || managed.length === 0) {
 		return {
 			state: 'stopped',
 			services: [],
-			setupLog: log,
+			setupLog: liveLog,
 			envDetails: details && Object.keys(details).length > 0 ? details : undefined,
 			errors: errors && errors.length > 0 ? errors : undefined
 		};
@@ -196,7 +200,7 @@ export function getEnvironmentStatus(workstreamId: string): EnvironmentStatus {
 	return {
 		state: anyError ? 'error' : allRunning ? 'running' : 'stopped',
 		services,
-		setupLog: log,
+		setupLog: liveLog,
 		envDetails: details && Object.keys(details).length > 0 ? details : undefined,
 		errors: errors && errors.length > 0 ? errors : undefined
 	};
@@ -207,4 +211,51 @@ export function getServiceLogs(workstreamId: string, serviceName: string): strin
 	if (!managed) return '';
 	const mp = managed.find((m) => m.name === serviceName);
 	return mp?.log.join('') ?? '';
+}
+
+// --- PID tracking for orphan cleanup ---
+
+function savePids(): void {
+	const pids: Record<string, number[]> = {};
+	for (const [id, managed] of runningProcesses) {
+		const activePids = managed
+			.map((mp) => mp.process.pid)
+			.filter((pid): pid is number => pid !== undefined);
+		if (activePids.length > 0) pids[id] = activePids;
+	}
+	try {
+		const dir = join(homedir(), '.workstream-hub');
+		if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+		writeFileSync(PID_FILE, JSON.stringify(pids));
+	} catch {
+		// Best-effort
+	}
+}
+
+/** Kill any orphaned processes from a previous hub session. */
+export function cleanupOrphanedProcesses(): void {
+	if (!existsSync(PID_FILE)) return;
+	try {
+		const raw = readFileSync(PID_FILE, 'utf-8');
+		const pids: Record<string, number[]> = JSON.parse(raw);
+		for (const pidList of Object.values(pids)) {
+			for (const pid of pidList) {
+				try {
+					// Kill entire process group
+					process.kill(-pid, 'SIGTERM');
+				} catch {
+					try {
+						// Fallback: kill individual process
+						process.kill(pid, 'SIGTERM');
+					} catch {
+						// Already dead
+					}
+				}
+			}
+		}
+		// Clear the PID file
+		writeFileSync(PID_FILE, '{}');
+	} catch {
+		// Best-effort
+	}
 }
