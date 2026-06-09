@@ -6,10 +6,11 @@
 
 	const STATUS_COLUMNS = [
 		{ key: 'Backlog', label: 'Backlog', color: 'bg-gray-400' },
-		{ key: 'Todo', label: 'Todo', color: 'bg-blue-500' },
+		{ key: 'Todo', label: 'Todo', color: 'bg-red-500' },
 		{ key: 'In Progress', label: 'In Progress', color: 'bg-amber-500' },
-		{ key: 'In Review', label: 'In Review', color: 'bg-purple-500' },
-		{ key: 'Done', label: 'Done', color: 'bg-green-500' },
+		{ key: 'Ready for Review', label: 'Ready for Review', color: 'bg-green-500' },
+		{ key: 'In Review', label: 'In Review', color: 'bg-green-500' },
+		{ key: 'Done', label: 'Done', color: 'bg-purple-500' },
 		{ key: 'Cancelled', label: 'Cancelled', color: 'bg-red-400' }
 	];
 
@@ -24,9 +25,7 @@
 		}
 		for (const w of workstreams) {
 			const status = getLinearStatus(w);
-			const col = STATUS_COLUMNS.find(
-				(c) => c.key.toLowerCase() === status.toLowerCase()
-			);
+			const col = STATUS_COLUMNS.find((c) => c.key.toLowerCase() === status.toLowerCase());
 			const key = col ? col.key : 'In Progress';
 			groups[key].push(w);
 		}
@@ -35,7 +34,9 @@
 
 	let grouped = $derived(groupWorkstreams(data.workstreams));
 
-	let activeCount = $derived(data.workstreams.filter((w: Workstream) => w.status === 'active').length);
+	let activeCount = $derived(
+		data.workstreams.filter((w: Workstream) => w.status === 'active').length
+	);
 	let totalCount = $derived(data.workstreams.length);
 </script>
 
@@ -68,8 +69,7 @@
 						<div class="mb-3 flex items-center gap-2">
 							<span class="inline-block h-2.5 w-2.5 rounded-full {col.color}"></span>
 							<h2 class="text-sm font-semibold text-gray-700">{col.label}</h2>
-							<span
-								class="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600"
+							<span class="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600"
 								>{items.length}</span
 							>
 						</div>
