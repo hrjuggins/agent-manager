@@ -1,4 +1,6 @@
 import { getLinearApiKey } from '$lib/server/config';
+import { updateWorkstream } from '$lib/server/store';
+import type { Workstream } from '$lib/types';
 
 export interface LinearPullRequest {
 	url: string;
@@ -126,4 +128,52 @@ export async function fetchLinearIssue(
 	} catch (err) {
 		return { data: null, error: err instanceof Error ? err.message : 'Unknown error' };
 	}
+}
+
+/**
+ * Sync a single workstream's Linear data (status, title, PRs).
+ * Returns the updated workstream, or the original if sync fails/skips.
+ */
+export async function syncWorkstreamLinear(workstream: Workstream): Promise<Workstream> {
+	const ticket = workstream.linearTicket;
+	if (!ticket?.id && !ticket?.url) return workstream;
+
+	const apiKey = getLinearApiKey();
+	if (!apiKey) return workstream;
+
+	const identifier = ticket.id || (ticket.url ? parseLinearUrl(ticket.url) : null);
+	if (!identifier) return workstream;
+
+	const result = await fetchLinearIssue(identifier);
+	if (!result.data) return workstream;
+
+	const patch: Record<string, unknown> = {
+		linearTicket: {
+			id: result.data.identifier,
+			url: result.data.url,
+			title: result.data.title,
+			status: result.data.status
+		}
+	};
+
+	if (result.data.pullRequests && result.data.pullRequests.length > 0) {
+		const pr = result.data.pullRequests[0];
+		patch.pullRequest = { url: pr.url, title: pr.title, status: pr.status };
+	}
+
+	const updated = updateWorkstream(workstream.id, patch);
+	return updated ?? workstream;
+}
+
+/**
+ * Sync Linear data for all workstreams that have a Linear ticket.
+ * Fetches in parallel. Best-effort — failures are silently skipped.
+ */
+export async function syncAllLinear(workstreams: Workstream[]): Promise<Workstream[]> {
+	const apiKey = getLinearApiKey();
+	if (!apiKey) return workstreams;
+
+	const results = await Promise.allSettled(workstreams.map((w) => syncWorkstreamLinear(w)));
+
+	return results.map((r, i) => (r.status === 'fulfilled' ? r.value : workstreams[i]));
 }
