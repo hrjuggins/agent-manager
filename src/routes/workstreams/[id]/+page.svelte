@@ -366,52 +366,6 @@
 					{/if}
 				</div>
 
-				<!-- Running Services -->
-				{#if envStatus?.services && envStatus.services.length > 0}
-					<div class="space-y-2">
-						{#each envStatus.services as service (service.name)}
-							<div
-								class="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3"
-							>
-								<div>
-									<span class="text-sm font-medium text-gray-900">{service.name}</span>
-									<span class="ml-2 font-mono text-xs text-gray-400">{service.command}</span>
-								</div>
-								<div class="flex items-center gap-3 text-xs">
-									{#if service.port}
-										<a
-											href="http://localhost:{service.port}"
-											target="_blank"
-											class="text-indigo-600 hover:text-indigo-500"
-										>
-											:{service.port}
-										</a>
-									{/if}
-									<span
-										class="inline-block h-2 w-2 rounded-full {service.status === 'running'
-											? 'bg-green-500'
-											: 'bg-red-500'}"
-									></span>
-								</div>
-							</div>
-						{/each}
-					</div>
-				{/if}
-
-				<!-- Worktree Path -->
-				<div class="flex flex-wrap gap-3">
-					{#if data.workstream.worktreePath}
-						<div class="flex-1 rounded-lg border border-gray-200 bg-white p-3">
-							<span class="text-xs font-semibold tracking-wide text-gray-500 uppercase"
-								>Worktree</span
-							>
-							<p class="mt-1 truncate font-mono text-xs text-gray-500">
-								{data.workstream.worktreePath}
-							</p>
-						</div>
-					{/if}
-				</div>
-
 				<!-- Environment Details (parsed from script output) -->
 				{#if envStatus?.envDetails && Object.keys(envStatus.envDetails).length > 0}
 					<div class="space-y-2">
@@ -443,6 +397,20 @@
 						</div>
 					</div>
 				{/if}
+
+				<!-- Worktree Path -->
+				<div class="flex flex-wrap gap-3">
+					{#if data.workstream.worktreePath}
+						<div class="flex-1 rounded-lg border border-gray-200 bg-white p-3">
+							<span class="text-xs font-semibold tracking-wide text-gray-500 uppercase"
+								>Worktree</span
+							>
+							<p class="mt-1 truncate font-mono text-xs text-gray-500">
+								{data.workstream.worktreePath}
+							</p>
+						</div>
+					{/if}
+				</div>
 
 				<!-- Script Errors -->
 				{#if envStatus?.errors && envStatus.errors.length > 0}
