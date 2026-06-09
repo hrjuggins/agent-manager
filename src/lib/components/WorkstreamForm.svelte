@@ -11,6 +11,7 @@
 	let status: 'active' | 'done' = $state(workstream?.status ?? 'active');
 	let repoPath = $state(workstream?.repoPath ?? '');
 	let branch = $state(workstream?.branch ?? '');
+	let baseBranch = $state(workstream?.baseBranch ?? '');
 
 	// Configured repos from settings
 	let configuredRepos = $state<RepoSettings[]>([]);
@@ -111,6 +112,7 @@
 			status,
 			repoPath: repoPath || undefined,
 			branch: branch || undefined,
+			baseBranch: baseBranch || undefined,
 			ideWorkspace: ideWorkspace || undefined,
 			aiChatUrl: aiChatUrl || undefined,
 			browserUrl: browserUrl || undefined,
@@ -204,7 +206,7 @@
 	</div>
 
 	<!-- Repo & Branch -->
-	<div class="grid gap-4 sm:grid-cols-2">
+	<div class="grid gap-4 sm:grid-cols-3">
 		<div>
 			<label for="repoSelect" class="block text-sm font-medium text-gray-700">Repository</label>
 			{#if configuredRepos.length > 0}
@@ -242,12 +244,24 @@
 				class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
 			/>
 		</div>
+		<div>
+			<label for="baseBranch" class="block text-sm font-medium text-gray-700">Base Branch</label>
+			<input
+				id="baseBranch"
+				type="text"
+				bind:value={baseBranch}
+				placeholder="main (optional)"
+				class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+			/>
+			<p class="mt-1 text-xs text-gray-400">Branch off this instead of HEAD</p>
+		</div>
 	</div>
 
 	<!-- IDE & AI Chat -->
 	<div class="grid gap-4 sm:grid-cols-2">
 		<div>
-			<label for="ideWorkspace" class="block text-sm font-medium text-gray-700">IDE Workspace</label>
+			<label for="ideWorkspace" class="block text-sm font-medium text-gray-700">IDE Workspace</label
+			>
 			<input
 				id="ideWorkspace"
 				type="text"

@@ -18,7 +18,11 @@ function sanitizeBranchName(branch: string): string {
 	return branch.replace(/[^a-zA-Z0-9_-]/g, '-').replace(/^-+|-+$/g, '');
 }
 
-export function createWorktree(repoPath: string, branch: string): WorktreeResult {
+export function createWorktree(
+	repoPath: string,
+	branch: string,
+	baseBranch?: string
+): WorktreeResult {
 	if (!existsSync(repoPath)) {
 		return { success: false, message: `Repository not found: ${repoPath}` };
 	}
@@ -54,7 +58,9 @@ export function createWorktree(repoPath: string, branch: string): WorktreeResult
 				stdio: 'pipe'
 			});
 		} else {
-			execSync(`git -C "${repoPath}" worktree add -b "${branch}" "${worktreePath}"`, {
+			// Create new branch; use baseBranch as start point if provided
+			const startPoint = baseBranch ? ` "${baseBranch}"` : '';
+			execSync(`git -C "${repoPath}" worktree add -b "${branch}" "${worktreePath}"${startPoint}`, {
 				stdio: 'pipe'
 			});
 		}

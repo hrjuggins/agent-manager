@@ -20,7 +20,12 @@ export const POST: RequestHandler = async ({ request }) => {
 			environment: { state: 'starting', services: [] }
 		});
 
-		bootstrapEnvironment(workstream.id, workstream.repoPath, workstream.branch).catch(() => {
+		bootstrapEnvironment(
+			workstream.id,
+			workstream.repoPath,
+			workstream.branch,
+			workstream.baseBranch
+		).catch(() => {
 			// Errors are captured in environment state
 		});
 	}
@@ -31,10 +36,11 @@ export const POST: RequestHandler = async ({ request }) => {
 async function bootstrapEnvironment(
 	workstreamId: string,
 	repoPath: string,
-	branch: string
+	branch: string,
+	baseBranch?: string
 ): Promise<void> {
-	// Create worktree
-	const worktreeResult = createWorktree(repoPath, branch);
+	// Create worktree (optionally branching off baseBranch)
+	const worktreeResult = createWorktree(repoPath, branch, baseBranch);
 	if (!worktreeResult.success) {
 		updateWorkstream(workstreamId, {
 			environment: { state: 'error', services: [], setupLog: worktreeResult.message }

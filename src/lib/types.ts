@@ -4,6 +4,7 @@ export interface Workstream {
 	status: 'active' | 'done';
 	repoPath?: string;
 	branch?: string;
+	baseBranch?: string;
 	worktreePath?: string;
 	ideWorkspace?: string;
 	aiChatUrl?: string;
