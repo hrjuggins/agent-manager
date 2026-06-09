@@ -104,7 +104,7 @@ export function runScript(workstreamId: string, cwd: string, repoPath: string): 
 	child.stdout?.on('data', (data: Buffer) => {
 		const text = data.toString();
 		mp.log.push(text);
-		if (mp.log.length > 100) mp.log.shift();
+		if (mp.log.length > 500) mp.log.shift();
 
 		// Parse key: value lines from stdout
 		const lines = text.split('\n');
@@ -121,14 +121,28 @@ export function runScript(workstreamId: string, cwd: string, repoPath: string): 
 	child.stderr?.on('data', (data: Buffer) => {
 		const text = data.toString();
 		mp.log.push(text);
-		if (mp.log.length > 100) mp.log.shift();
+		if (mp.log.length > 500) mp.log.shift();
 
-		// Capture error lines (filter out common noise)
-		const lines = text.split('\n').filter((l) => l.trim());
-		const errors = envErrors.get(workstreamId) ?? [];
+		// Also parse key: value lines from stderr (some tools output to stderr)
+		const lines = text.split('\n');
+		const details = envDetails.get(workstreamId) ?? {};
 		for (const line of lines) {
-			// Skip common non-error noise (npm warnings, deprecation notices)
+			const kvMatch = line.match(/^([\w\s._-]+):\s+(.+)$/);
+			if (kvMatch) {
+				details[kvMatch[1].trim()] = kvMatch[2].trim();
+			}
+		}
+		envDetails.set(workstreamId, details);
+
+		// Capture genuine error lines (filter out common noise)
+		const errorLines = lines.filter((l) => l.trim());
+		const errors = envErrors.get(workstreamId) ?? [];
+		for (const line of errorLines) {
+			// Skip common non-error noise
 			if (line.includes('npm warn') || line.includes('WARN deprecated')) continue;
+			if (line.includes('ready in') || line.includes('Local:') || line.includes('Network:'))
+				continue;
+			if (line.includes('VITE') && !line.includes('error')) continue;
 			errors.push(line);
 			if (errors.length > 50) errors.shift();
 		}
