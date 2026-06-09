@@ -43,7 +43,48 @@ export function getPortOffset(repoPath: string, cwd: string): number {
 }
 
 /**
- * Write a temporary setup script to disk and open it in Terminal.app.
+ * Run a command in the configured terminal app via AppleScript.
+ * Handles Terminal.app, iTerm2, and falls back to `open -a` for others.
+ */
+function runInTerminal(terminalApp: string, command: string): void {
+	const app = terminalApp.toLowerCase();
+
+	if (app === 'iterm' || app === 'iterm2') {
+		// iTerm2 uses a different AppleScript API than Terminal.app
+		const script = `
+tell application "iTerm"
+	activate
+	set newWindow to (create window with default profile)
+	tell current session of newWindow
+		write text ${JSON.stringify(command)}
+	end tell
+end tell`;
+		execSync(`osascript -e '${script.replace(/'/g, "'\\''")}'`);
+	} else if (app === 'terminal' || app === 'terminal.app') {
+		const script = `
+tell application "Terminal"
+	activate
+	do script ${JSON.stringify(command)}
+end tell`;
+		execSync(`osascript -e '${script.replace(/'/g, "'\\''")}'`);
+	} else {
+		// Generic fallback: try AppleScript do script, then open -a
+		const script = `
+tell application "${terminalApp}"
+	activate
+	do script ${JSON.stringify(command)}
+end tell`;
+		try {
+			execSync(`osascript -e '${script.replace(/'/g, "'\\''")}'`);
+		} catch {
+			// Last resort: open the app and hope it accepts arguments
+			execSync(`open -a "${terminalApp}"`);
+		}
+	}
+}
+
+/**
+ * Write a temporary setup script to disk and open it in the configured terminal.
  * The script runs in the worktree directory with PORT_OFFSET set.
  */
 export function openTerminalWithSetup(
@@ -55,16 +96,10 @@ export function openTerminalWithSetup(
 
 	if (!config?.setup || config.setup.length === 0) {
 		// No setup script — just open terminal in the worktree directory
-		const escapedCwd = cwd.replace(/'/g, "'\\''");
-		const appleScript = `tell application "${terminalApp}"
-	activate
-	do script "cd '${escapedCwd}'"
-end tell`;
 		try {
-			execSync(`osascript -e '${appleScript.replace(/'/g, "'\\''")}'`);
+			runInTerminal(terminalApp, `cd '${cwd.replace(/'/g, "'\\''")}'`);
 		} catch {
-			// Fallback: try open command
-			execSync(`open -a "${terminalApp}" "${cwd}"`);
+			return { success: false, message: `Failed to open ${terminalApp}` };
 		}
 		return { success: true, message: `Opened ${terminalApp} in worktree directory` };
 	}
@@ -105,15 +140,8 @@ ${script.replace(/^#!.*\n?/, '')}
 
 	writeFileSync(scriptPath, wrapperScript, { mode: 0o755 });
 
-	// Open the configured terminal app and run the script
-	const escapedScriptPath = scriptPath.replace(/'/g, "'\\''");
-	const appleScript = `tell application "${terminalApp}"
-	activate
-	do script "'${escapedScriptPath}'"
-end tell`;
-
 	try {
-		execSync(`osascript -e '${appleScript.replace(/'/g, "'\\''")}'`);
+		runInTerminal(terminalApp, `'${scriptPath.replace(/'/g, "'\\''")}'`);
 	} catch {
 		return { success: false, message: `Failed to open ${terminalApp}` };
 	}
