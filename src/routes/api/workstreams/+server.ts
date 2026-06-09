@@ -1,7 +1,8 @@
 import { json } from '@sveltejs/kit';
-import { listWorkstreams, createWorkstream, updateWorkstream } from '$lib/server/store';
+import { listWorkstreams, createWorkstream, updateWorkstream, getWorkstream } from '$lib/server/store';
 import { createWorktree } from '$lib/server/worktree';
 import { runScript, getEnvironmentStatus, readRepoConfig } from '$lib/server/environment';
+import { openInIDE } from '$lib/server/launcher';
 import type { WorkstreamCreate } from '$lib/types';
 import type { RequestHandler } from './$types';
 
@@ -44,6 +45,10 @@ async function bootstrapEnvironment(
 
 	const cwd = worktreeResult.worktreePath!;
 	updateWorkstream(workstreamId, { worktreePath: cwd });
+
+	// Auto-open IDE with the worktree
+	const updated = getWorkstream(workstreamId);
+	if (updated) openInIDE(updated);
 
 	// Run the setup script (entire script as one process)
 	const config = readRepoConfig(repoPath);
