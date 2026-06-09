@@ -7,6 +7,11 @@
 	let ideSaving = $state(false);
 	let ideMessage = $state('');
 
+	// --- Terminal ---
+	let terminalApp = $state('');
+	let terminalSaving = $state(false);
+	let terminalMessage = $state('');
+
 	// --- Linear ---
 	let linearApiKey = $state('');
 	let hasLinearKey = $state(false);
@@ -34,6 +39,7 @@
 			const data = await settingsRes.json();
 			hasLinearKey = data.hasLinearKey;
 			ideCommand = data.ideCommand ?? '';
+			terminalApp = data.terminalApp ?? '';
 		}
 		if (reposRes.ok) {
 			repos = await reposRes.json();
@@ -57,6 +63,26 @@
 			}
 		} finally {
 			ideSaving = false;
+		}
+	}
+
+	// --- Terminal handlers ---
+	async function saveTerminalApp() {
+		terminalSaving = true;
+		terminalMessage = '';
+		try {
+			const res = await fetch('/api/settings', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ terminalApp })
+			});
+			if (res.ok) {
+				terminalMessage = 'Saved';
+			} else {
+				terminalMessage = 'Failed to save';
+			}
+		} finally {
+			terminalSaving = false;
 		}
 	}
 
@@ -197,8 +223,7 @@
 				>,
 				<code class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">code</code>,
 				<code class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">webstorm</code>, or
-				<code class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700"
-					>open -a "App Name"</code
+				<code class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">open -a "App Name"</code
 				>.
 			</p>
 		</div>
@@ -226,6 +251,48 @@
 			</button>
 			{#if ideMessage}
 				<span class="text-sm text-gray-500">{ideMessage}</span>
+			{/if}
+		</div>
+	</section>
+
+	<!-- Terminal -->
+	<section class="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
+		<div>
+			<h2 class="text-lg font-semibold text-gray-900">Terminal</h2>
+			<p class="mt-1 text-sm text-gray-500">
+				The macOS app used to run setup scripts. For example: <code
+					class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">Terminal</code
+				>,
+				<code class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">iTerm</code>,
+				<code class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">Warp</code>, or
+				<code class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">Alacritty</code>.
+				Defaults to Terminal if not set.
+			</p>
+		</div>
+
+		<div>
+			<label for="terminalApp" class="block text-sm font-medium text-gray-700">Terminal App</label>
+			<div class="mt-1 flex gap-2">
+				<input
+					id="terminalApp"
+					type="text"
+					bind:value={terminalApp}
+					placeholder="Terminal"
+					class="flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+				/>
+			</div>
+		</div>
+
+		<div class="flex items-center gap-3">
+			<button
+				onclick={saveTerminalApp}
+				disabled={terminalSaving}
+				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
+			>
+				{terminalSaving ? 'Saving...' : 'Save'}
+			</button>
+			{#if terminalMessage}
+				<span class="text-sm text-gray-500">{terminalMessage}</span>
 			{/if}
 		</div>
 	</section>
@@ -377,9 +444,8 @@
 						>Setup Script</label
 					>
 					<p class="mt-0.5 text-xs text-gray-400">
-						One command per line. The entire script runs when a workstream is created.
-						Include dependency installs, dev servers, and port assignments directly in the
-						script.
+						One command per line. The entire script runs when a workstream is created. Include
+						dependency installs, dev servers, and port assignments directly in the script.
 					</p>
 					<textarea
 						id="setupScript"

@@ -6,6 +6,7 @@ import type { RepoSettings } from '$lib/types';
 export interface AppConfig {
 	linearApiKey?: string;
 	ideCommand?: string;
+	terminalApp?: string;
 	repos?: RepoSettings[];
 }
 
@@ -57,6 +58,12 @@ export function validateLinearApiKey(key: string): string | null {
 
 export function getIdeCommand(): string | undefined {
 	return readConfig().ideCommand;
+}
+
+// --- Terminal app ---
+
+export function getTerminalApp(): string {
+	return readConfig().terminalApp || 'Terminal';
 }
 
 // --- Repo settings ---

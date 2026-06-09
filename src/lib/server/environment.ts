@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { getRepoByPath } from '$lib/server/config';
+import { getRepoByPath, getTerminalApp } from '$lib/server/config';
 import { listWorktrees } from '$lib/server/worktree';
 import type { RepoConfig } from '$lib/types';
 
@@ -51,10 +51,12 @@ export function openTerminalWithSetup(
 	cwd: string
 ): { success: boolean; message: string } {
 	const config = readRepoConfig(repoPath);
+	const terminalApp = getTerminalApp();
+
 	if (!config?.setup || config.setup.length === 0) {
 		// No setup script — just open terminal in the worktree directory
 		const escapedCwd = cwd.replace(/'/g, "'\\''");
-		const appleScript = `tell application "Terminal"
+		const appleScript = `tell application "${terminalApp}"
 	activate
 	do script "cd '${escapedCwd}'"
 end tell`;
@@ -62,9 +64,9 @@ end tell`;
 			execSync(`osascript -e '${appleScript.replace(/'/g, "'\\''")}'`);
 		} catch {
 			// Fallback: try open command
-			execSync(`open -a Terminal "${cwd}"`);
+			execSync(`open -a "${terminalApp}" "${cwd}"`);
 		}
-		return { success: true, message: 'Opened terminal in worktree directory' };
+		return { success: true, message: `Opened ${terminalApp} in worktree directory` };
 	}
 
 	const script = config.setup.join('\n');
@@ -103,9 +105,9 @@ ${script.replace(/^#!.*\n?/, '')}
 
 	writeFileSync(scriptPath, wrapperScript, { mode: 0o755 });
 
-	// Open Terminal.app and run the script
+	// Open the configured terminal app and run the script
 	const escapedScriptPath = scriptPath.replace(/'/g, "'\\''");
-	const appleScript = `tell application "Terminal"
+	const appleScript = `tell application "${terminalApp}"
 	activate
 	do script "'${escapedScriptPath}'"
 end tell`;
@@ -113,11 +115,11 @@ end tell`;
 	try {
 		execSync(`osascript -e '${appleScript.replace(/'/g, "'\\''")}'`);
 	} catch {
-		return { success: false, message: 'Failed to open Terminal.app' };
+		return { success: false, message: `Failed to open ${terminalApp}` };
 	}
 
 	return {
 		success: true,
-		message: `Setup script running in Terminal (port offset: ${portOffset})`
+		message: `Setup script running in ${terminalApp} (port offset: ${portOffset})`
 	};
 }
