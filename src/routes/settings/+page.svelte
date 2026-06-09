@@ -2,6 +2,11 @@
 	import { onMount } from 'svelte';
 	import type { RepoSettings } from '$lib/types';
 
+	// --- IDE ---
+	let ideCommand = $state('');
+	let ideSaving = $state(false);
+	let ideMessage = $state('');
+
 	// --- Linear ---
 	let linearApiKey = $state('');
 	let hasLinearKey = $state(false);
@@ -28,11 +33,32 @@
 		if (settingsRes.ok) {
 			const data = await settingsRes.json();
 			hasLinearKey = data.hasLinearKey;
+			ideCommand = data.ideCommand ?? '';
 		}
 		if (reposRes.ok) {
 			repos = await reposRes.json();
 		}
 	});
+
+	// --- IDE handlers ---
+	async function saveIdeCommand() {
+		ideSaving = true;
+		ideMessage = '';
+		try {
+			const res = await fetch('/api/settings', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ ideCommand })
+			});
+			if (res.ok) {
+				ideMessage = 'Saved';
+			} else {
+				ideMessage = 'Failed to save';
+			}
+		} finally {
+			ideSaving = false;
+		}
+	}
 
 	// --- Linear handlers ---
 	async function saveLinearKey() {
@@ -160,6 +186,47 @@
 		<h1 class="text-2xl font-bold">Settings</h1>
 		<p class="mt-1 text-sm text-zinc-400">Configure integrations and repositories</p>
 	</div>
+
+	<!-- IDE -->
+	<section class="space-y-4 rounded-lg border border-zinc-800 p-6">
+		<div>
+			<h2 class="text-lg font-semibold">IDE</h2>
+			<p class="mt-1 text-sm text-zinc-400">
+				The command used to open workstream directories. For example: <code
+					class="rounded bg-zinc-800 px-1 py-0.5 text-xs">cursor</code
+				>,
+				<code class="rounded bg-zinc-800 px-1 py-0.5 text-xs">code</code>,
+				<code class="rounded bg-zinc-800 px-1 py-0.5 text-xs">webstorm</code>, or a full path
+				like <code class="rounded bg-zinc-800 px-1 py-0.5 text-xs">/usr/local/bin/idea</code>.
+			</p>
+		</div>
+
+		<div>
+			<label for="ideCommand" class="block text-sm font-medium text-zinc-300">IDE Command</label>
+			<div class="mt-1 flex gap-2">
+				<input
+					id="ideCommand"
+					type="text"
+					bind:value={ideCommand}
+					placeholder="cursor"
+					class="flex-1 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+				/>
+			</div>
+		</div>
+
+		<div class="flex items-center gap-3">
+			<button
+				onclick={saveIdeCommand}
+				disabled={ideSaving}
+				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
+			>
+				{ideSaving ? 'Saving...' : 'Save'}
+			</button>
+			{#if ideMessage}
+				<span class="text-sm text-zinc-400">{ideMessage}</span>
+			{/if}
+		</div>
+	</section>
 
 	<!-- Linear Integration -->
 	<section class="space-y-4 rounded-lg border border-zinc-800 p-6">

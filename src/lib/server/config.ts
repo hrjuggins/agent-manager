@@ -5,6 +5,7 @@ import type { RepoSettings } from '$lib/types';
 
 export interface AppConfig {
 	linearApiKey?: string;
+	ideCommand?: string;
 	repos?: RepoSettings[];
 }
 
@@ -50,6 +51,12 @@ export function validateLinearApiKey(key: string): string | null {
 	if (!key) return 'Key is empty';
 	if (!isValidApiKey(key)) return 'Key contains invalid characters — re-enter your real API key';
 	return null;
+}
+
+// --- IDE command ---
+
+export function getIdeCommand(): string | undefined {
+	return readConfig().ideCommand;
 }
 
 // --- Repo settings ---

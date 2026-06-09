@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import type { Workstream } from '$lib/types';
+import { getIdeCommand } from './config';
 
 export interface LaunchResult {
 	success: boolean;
@@ -11,13 +12,15 @@ export function openInIDE(workstream: Workstream): LaunchResult {
 	if (!target) {
 		return { success: false, message: 'No IDE workspace or repo path configured' };
 	}
-	// Try VS Code first, fall back to $EDITOR
-	exec(`code "${target}"`, (error) => {
-		if (error) {
-			exec(`${process.env.EDITOR || 'vim'} "${target}"`);
-		}
-	});
-	return { success: true, message: `Opening ${target} in IDE` };
+	const ideCmd = getIdeCommand();
+	if (!ideCmd) {
+		return {
+			success: false,
+			message: 'No IDE command configured. Go to Settings to set your IDE command (e.g. cursor, code, webstorm).'
+		};
+	}
+	exec(`${ideCmd} "${target}"`);
+	return { success: true, message: `Opening ${target} with ${ideCmd}` };
 }
 
 export function openBrowser(workstream: Workstream): LaunchResult {
