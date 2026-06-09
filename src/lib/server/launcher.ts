@@ -16,7 +16,8 @@ export function openInIDE(workstream: Workstream): LaunchResult {
 	if (!ideCmd) {
 		return {
 			success: false,
-			message: 'No IDE command configured. Go to Settings to set your IDE command (e.g. cursor, code, webstorm).'
+			message:
+				'No IDE command configured. Go to Settings to set your IDE command (e.g. cursor, code, webstorm).'
 		};
 	}
 	exec(`${ideCmd} "${target}"`);
@@ -61,22 +62,6 @@ export function openPullRequest(workstream: Workstream): LaunchResult {
 	const cmd = getOpenCommand();
 	exec(`${cmd} "${url}"`);
 	return { success: true, message: `Opening PR: ${url}` };
-}
-
-export function checkoutBranch(workstream: Workstream): LaunchResult {
-	if (!workstream.repoPath) {
-		return { success: false, message: 'No repo path configured' };
-	}
-	if (!workstream.branch) {
-		return { success: false, message: 'No branch configured' };
-	}
-	exec(`git -C "${workstream.repoPath}" checkout "${workstream.branch}"`, (error) => {
-		if (error) {
-			// Try creating the branch if it doesn't exist
-			exec(`git -C "${workstream.repoPath}" checkout -b "${workstream.branch}"`);
-		}
-	});
-	return { success: true, message: `Checking out branch: ${workstream.branch}` };
 }
 
 function getOpenCommand(): string {

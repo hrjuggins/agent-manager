@@ -5,8 +5,7 @@ import {
 	openBrowser,
 	openAIChat,
 	openLinearTicket,
-	openPullRequest,
-	checkoutBranch
+	openPullRequest
 } from '$lib/server/launcher';
 import type { RequestHandler } from './$types';
 
@@ -27,8 +26,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			return json(openLinearTicket(workstream));
 		case 'pull-request':
 			return json(openPullRequest(workstream));
-		case 'checkout':
-			return json(checkoutBranch(workstream));
 		default:
 			throw error(400, `Unknown action: ${action}`);
 	}

@@ -273,21 +273,6 @@
 					</svg>
 					AI Chat
 				</button>
-				<button
-					onclick={() => launch('checkout')}
-					disabled={!data.workstream.branch || !data.workstream.repoPath}
-					class="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-				>
-					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M13 10V3L4 14h7v7l9-11h-7z"
-						/>
-					</svg>
-					Checkout Branch
-				</button>
 			</div>
 		</section>
 
@@ -476,9 +461,9 @@
 							Script Issues ({envStatus.errors.length})
 						</h3>
 						<pre
-							class="max-h-48 overflow-auto rounded-lg border border-red-200 bg-red-50 p-3 font-mono text-xs text-red-700"
-							>{envStatus.errors.join('\n')}</pre
-						>
+							class="max-h-48 overflow-auto rounded-lg border border-red-200 bg-red-50 p-3 font-mono text-xs text-red-700">{envStatus.errors.join(
+								'\n'
+							)}</pre>
 					</div>
 				{/if}
 
@@ -540,10 +525,16 @@
 									<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
 										Linear Ticket
 									</h3>
-									<p class="mt-1 text-sm font-medium text-gray-900">{data.workstream.linearTicket.title}</p>
+									<p class="mt-1 text-sm font-medium text-gray-900">
+										{data.workstream.linearTicket.title}
+									</p>
 									<div class="mt-1 flex items-center gap-2 text-xs">
 										<span class="font-mono text-gray-400">{data.workstream.linearTicket.id}</span>
-										<span class="rounded-full px-2 py-0.5 text-xs font-medium {statusColor(data.workstream.linearTicket.status)}">
+										<span
+											class="rounded-full px-2 py-0.5 text-xs font-medium {statusColor(
+												data.workstream.linearTicket.status
+											)}"
+										>
 											{data.workstream.linearTicket.status}
 										</span>
 									</div>
@@ -567,8 +558,12 @@
 							<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
 								Pull Request
 							</h3>
-							<p class="mt-1 text-sm font-medium text-gray-900">{data.workstream.pullRequest.title}</p>
-							<span class="mt-1 inline-block rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+							<p class="mt-1 text-sm font-medium text-gray-900">
+								{data.workstream.pullRequest.title}
+							</p>
+							<span
+								class="mt-1 inline-block rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700"
+							>
 								{data.workstream.pullRequest.status}
 							</span>
 						</button>
