@@ -83,6 +83,14 @@
 			if (!name && data.title) {
 				name = data.title;
 			}
+
+			// Auto-populate PR from Linear attachments
+			if (!prUrl && data.pullRequests?.length > 0) {
+				const pr = data.pullRequests[0];
+				prUrl = pr.url;
+				prTitle = pr.title;
+				prStatus = pr.status;
+			}
 		} catch {
 			linearError = 'Network error fetching ticket';
 		} finally {

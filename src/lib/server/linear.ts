@@ -1,5 +1,11 @@
 import { getLinearApiKey } from '$lib/server/config';
 
+export interface LinearPullRequest {
+	url: string;
+	title: string;
+	status: string;
+}
+
 export interface LinearIssueData {
 	identifier: string;
 	title: string;
@@ -7,6 +13,7 @@ export interface LinearIssueData {
 	status: string;
 	assignee?: string;
 	priority?: string;
+	pullRequests?: LinearPullRequest[];
 }
 
 export function parseLinearUrl(url: string): string | null {
@@ -35,6 +42,14 @@ export async function fetchLinearIssue(
 			state { name }
 			assignee { name }
 			priorityLabel
+			attachments {
+				nodes {
+					url
+					title
+					subtitle
+					sourceType
+				}
+			}
 		}
 	}`;
 
@@ -61,6 +76,14 @@ export async function fetchLinearIssue(
 					state?: { name: string };
 					assignee?: { name: string };
 					priorityLabel?: string;
+					attachments?: {
+						nodes: Array<{
+							url: string;
+							title: string;
+							subtitle?: string;
+							sourceType?: string;
+						}>;
+					};
 				};
 			};
 			errors?: Array<{ message: string }>;
@@ -73,6 +96,22 @@ export async function fetchLinearIssue(
 		const issue = json.data?.issue;
 		if (!issue) return { data: null, error: `No issue found for "${identifier}"` };
 
+		// Extract PRs from attachments (GitHub/GitLab PR links)
+		const pullRequests: LinearPullRequest[] = (issue.attachments?.nodes ?? [])
+			.filter(
+				(a) =>
+					a.url &&
+					(a.url.includes('/pull/') ||
+						a.url.includes('/merge_requests/') ||
+						a.sourceType === 'github' ||
+						a.sourceType === 'gitlab')
+			)
+			.map((a) => ({
+				url: a.url,
+				title: a.title || a.subtitle || a.url,
+				status: a.subtitle ?? 'Open'
+			}));
+
 		return {
 			data: {
 				identifier: issue.identifier,
@@ -80,7 +119,8 @@ export async function fetchLinearIssue(
 				url: issue.url,
 				status: issue.state?.name ?? 'Unknown',
 				assignee: issue.assignee?.name,
-				priority: issue.priorityLabel
+				priority: issue.priorityLabel,
+				pullRequests: pullRequests.length > 0 ? pullRequests : undefined
 			}
 		};
 	} catch (err) {

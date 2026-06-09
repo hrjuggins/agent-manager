@@ -128,17 +128,27 @@
 
 			if (res.ok) {
 				const issueData = await res.json();
+				const patch: Record<string, unknown> = {
+					linearTicket: {
+						id: issueData.identifier,
+						url: issueData.url,
+						title: issueData.title,
+						status: issueData.status
+					}
+				};
+				// Auto-link first PR from Linear attachments
+				if (issueData.pullRequests?.length > 0) {
+					const pr = issueData.pullRequests[0];
+					patch.pullRequest = {
+						url: pr.url,
+						title: pr.title,
+						status: pr.status
+					};
+				}
 				await fetch(`/api/workstreams/${data.workstream.id}`, {
 					method: 'PATCH',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						linearTicket: {
-							id: issueData.identifier,
-							url: issueData.url,
-							title: issueData.title,
-							status: issueData.status
-						}
-					})
+					body: JSON.stringify(patch)
 				});
 				invalidateAll();
 			}
