@@ -3,6 +3,24 @@
 
 	let { workstream }: { workstream: Workstream } = $props();
 
+	function statusColor(status: string): string {
+		const s = status.toLowerCase();
+		if (s === 'done') return 'bg-green-100 text-green-700';
+		if (s === 'in progress') return 'bg-amber-100 text-amber-700';
+		if (s === 'in review') return 'bg-purple-100 text-purple-700';
+		if (s === 'todo') return 'bg-blue-100 text-blue-700';
+		if (s === 'backlog') return 'bg-gray-100 text-gray-600';
+		if (s === 'cancelled') return 'bg-red-100 text-red-600';
+		return 'bg-gray-100 text-gray-600';
+	}
+
+	function envStateColor(state: string): string {
+		if (state === 'running') return 'bg-green-500';
+		if (state === 'starting') return 'bg-amber-400';
+		if (state === 'error') return 'bg-red-500';
+		return 'bg-gray-300';
+	}
+
 	async function launch(action: string) {
 		await fetch(`/api/workstreams/${workstream.id}/launch`, {
 			method: 'POST',
@@ -14,29 +32,32 @@
 
 <a
 	href="/workstreams/{workstream.id}"
-	class="group block rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 transition hover:border-zinc-700 hover:bg-zinc-900"
+	class="group block rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition hover:border-gray-300 hover:shadow-md"
 >
-	<div class="flex items-start justify-between gap-4">
+	<div class="flex items-start justify-between gap-3">
 		<div class="min-w-0 flex-1">
-			<div class="flex items-center gap-2">
-				<span
-					class="inline-block h-2 w-2 rounded-full {workstream.status === 'active'
-						? 'bg-green-500'
-						: 'bg-zinc-500'}"
-				></span>
-				<h3 class="truncate font-medium">{workstream.name}</h3>
-			</div>
-			<div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-400">
-				{#if workstream.branch}
-					<span class="font-mono">{workstream.branch}</span>
-				{/if}
-				{#if workstream.repoPath}
-					<span class="truncate">{workstream.repoPath.split('/').slice(-1)[0]}</span>
-				{/if}
+			<h3 class="truncate text-sm font-medium text-gray-900">{workstream.name}</h3>
+			<div class="mt-1.5 flex flex-wrap items-center gap-1.5">
 				{#if workstream.linearTicket}
-					<span class="text-indigo-400">{workstream.linearTicket.id}</span>
+					<span
+						class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {statusColor(workstream.linearTicket.status)}"
+					>
+						{workstream.linearTicket.status}
+					</span>
+					<span class="font-mono text-xs text-gray-400">{workstream.linearTicket.id}</span>
+				{/if}
+				{#if workstream.environment?.state}
+					<span class="flex items-center gap-1 text-xs text-gray-500">
+						<span
+							class="inline-block h-1.5 w-1.5 rounded-full {envStateColor(workstream.environment.state)}"
+						></span>
+						{workstream.environment.state}
+					</span>
 				{/if}
 			</div>
+			{#if workstream.branch}
+				<p class="mt-1 truncate font-mono text-xs text-gray-400">{workstream.branch}</p>
+			{/if}
 		</div>
 		<div class="flex shrink-0 gap-1">
 			{#if workstream.ideWorkspace || workstream.repoPath}
@@ -45,7 +66,7 @@
 						e.preventDefault();
 						launch('ide');
 					}}
-					class="rounded bg-zinc-800 p-1.5 text-zinc-400 transition hover:bg-zinc-700 hover:text-white"
+					class="rounded p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
 					title="Open in IDE"
 				>
 					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -64,7 +85,7 @@
 						e.preventDefault();
 						launch('browser');
 					}}
-					class="rounded bg-zinc-800 p-1.5 text-zinc-400 transition hover:bg-zinc-700 hover:text-white"
+					class="rounded p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
 					title="Open browser"
 				>
 					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -83,7 +104,7 @@
 						e.preventDefault();
 						launch('ai-chat');
 					}}
-					class="rounded bg-zinc-800 p-1.5 text-zinc-400 transition hover:bg-zinc-700 hover:text-white"
+					class="rounded p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
 					title="Open AI chat"
 				>
 					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
