@@ -33,7 +33,6 @@
 		const repo = configuredRepos.find((r) => r.id === selectedRepoId);
 		repoPath = repo?.path ?? '';
 	}
-	let ideWorkspace = $state(workstream?.ideWorkspace ?? '');
 	let aiChatUrl = $state(workstream?.aiChatUrl ?? '');
 	let browserUrl = $state(workstream?.browserUrl ?? '');
 	let notes = $state(workstream?.notes ?? '');
@@ -113,7 +112,6 @@
 			repoPath: repoPath || undefined,
 			branch: branch || undefined,
 			baseBranch: baseBranch || undefined,
-			ideWorkspace: ideWorkspace || undefined,
 			aiChatUrl: aiChatUrl || undefined,
 			browserUrl: browserUrl || undefined,
 			notes: notes || undefined,
@@ -257,29 +255,16 @@
 		</div>
 	</div>
 
-	<!-- IDE & AI Chat -->
-	<div class="grid gap-4 sm:grid-cols-2">
-		<div>
-			<label for="ideWorkspace" class="block text-sm font-medium text-gray-700">IDE Workspace</label
-			>
-			<input
-				id="ideWorkspace"
-				type="text"
-				bind:value={ideWorkspace}
-				placeholder="/path/to/workspace or folder"
-				class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-			/>
-		</div>
-		<div>
-			<label for="aiChatUrl" class="block text-sm font-medium text-gray-700">AI Chat URL</label>
-			<input
-				id="aiChatUrl"
-				type="text"
-				bind:value={aiChatUrl}
-				placeholder="https://chat.openai.com/..."
-				class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-			/>
-		</div>
+	<!-- AI Chat -->
+	<div>
+		<label for="aiChatUrl" class="block text-sm font-medium text-gray-700">AI Chat URL</label>
+		<input
+			id="aiChatUrl"
+			type="text"
+			bind:value={aiChatUrl}
+			placeholder="https://chat.openai.com/..."
+			class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+		/>
 	</div>
 
 	<!-- Browser URL -->
