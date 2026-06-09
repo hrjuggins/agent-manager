@@ -12,9 +12,12 @@
 	let showSetupLog = $state(false);
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-	// Auto-poll when environment is starting (background bootstrap)
+	// Auto-poll when environment is starting or running without env details yet
 	onMount(() => {
-		if (envStatus?.state === 'starting') {
+		if (
+			envStatus?.state === 'starting' ||
+			(envStatus?.state === 'running' && !envStatus?.envDetails)
+		) {
 			startPolling();
 		}
 	});
@@ -27,7 +30,12 @@
 		stopPolling();
 		pollTimer = setInterval(async () => {
 			await refreshEnvironment();
-			if (envStatus?.state !== 'starting') {
+			// Stop polling once we have a terminal state with env details populated
+			const settled =
+				envStatus?.state !== 'starting' &&
+				(envStatus?.state !== 'running' ||
+					(envStatus?.envDetails && Object.keys(envStatus.envDetails).length > 0));
+			if (settled) {
 				stopPolling();
 				invalidateAll();
 			}

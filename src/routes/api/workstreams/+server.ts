@@ -55,8 +55,12 @@ async function bootstrapEnvironment(
 	const config = readRepoConfig(repoPath);
 	if (config?.setup && config.setup.length > 0) {
 		runScript(workstreamId, cwd, repoPath);
+		// Keep state as 'starting' — the UI polls until env details are populated
+		updateWorkstream(workstreamId, {
+			environment: { state: 'starting', services: [] }
+		});
+	} else {
+		const envStatus = getEnvironmentStatus(workstreamId);
+		updateWorkstream(workstreamId, { environment: envStatus });
 	}
-
-	const envStatus = getEnvironmentStatus(workstreamId);
-	updateWorkstream(workstreamId, { environment: envStatus });
 }
