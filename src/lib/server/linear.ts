@@ -15,6 +15,7 @@ export interface LinearIssueData {
 	status: string;
 	assignee?: string;
 	priority?: string;
+	branchName?: string;
 	pullRequests?: LinearPullRequest[];
 }
 
@@ -41,6 +42,7 @@ export async function fetchLinearIssue(
 			identifier
 			title
 			url
+			branchName
 			state { name }
 			assignee { name }
 			priorityLabel
@@ -76,6 +78,7 @@ export async function fetchLinearIssue(
 					title: string;
 					url: string;
 					state?: { name: string };
+					branchName?: string;
 					assignee?: { name: string };
 					priorityLabel?: string;
 					attachments?: {
@@ -122,6 +125,7 @@ export async function fetchLinearIssue(
 				status: issue.state?.name ?? 'Unknown',
 				assignee: issue.assignee?.name,
 				priority: issue.priorityLabel,
+				branchName: issue.branchName,
 				pullRequests: pullRequests.length > 0 ? pullRequests : undefined
 			}
 		};
