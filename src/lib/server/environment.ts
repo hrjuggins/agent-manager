@@ -221,6 +221,27 @@ export function openServiceTerminal(
 ): { success: boolean; message: string } {
 	const terminalApp = getTerminalApp();
 	const portOffset = getPortOffset(repoPath, cwd);
+	const scriptPath = writeServiceScript(service, allServices, portOffset, portStride, cwd);
+
+	try {
+		runInTerminal(terminalApp, `'${scriptPath.replace(/'/g, "'\\''")}'`);
+	} catch {
+		return { success: false, message: `Failed to open ${terminalApp} for ${service.name}` };
+	}
+
+	return { success: true, message: `${service.name} running in ${terminalApp}` };
+}
+
+/**
+ * Write a service script to disk and return the path.
+ */
+function writeServiceScript(
+	service: DevServiceConfig,
+	allServices: DevServiceConfig[],
+	portOffset: number,
+	portStride: number,
+	cwd: string
+): string {
 	const envVars = buildServiceEnv(service, allServices, portOffset, portStride);
 	const escapedCwd = cwd.replace(/'/g, "'\\''");
 
@@ -245,18 +266,65 @@ ${service.command}
 `;
 
 	writeFileSync(scriptPath, script, { mode: 0o755 });
-
-	try {
-		runInTerminal(terminalApp, `'${scriptPath.replace(/'/g, "'\\''")}'`);
-	} catch {
-		return { success: false, message: `Failed to open ${terminalApp} for ${service.name}` };
-	}
-
-	return { success: true, message: `${service.name} running in ${terminalApp}` };
+	return scriptPath;
 }
 
 /**
- * Open terminal tabs for all dev services of a repo.
+ * Start all dev services in iTerm2 split panes within a single window.
+ * First service gets the initial session, subsequent services split horizontally.
+ */
+function startServicesInITermPanes(scriptPaths: { name: string; path: string }[]): {
+	success: boolean;
+	message: string;
+} {
+	if (scriptPaths.length === 0) {
+		return { success: true, message: 'No services to start' };
+	}
+
+	const escapePath = (p: string) => p.replace(/'/g, "'\\''");
+
+	// Build AppleScript: one window, split panes for each service
+	const lines: string[] = [
+		'tell application "iTerm"',
+		'\tactivate',
+		`\tset newWindow to (create window with default profile)`,
+		'\ttell newWindow'
+	];
+
+	// First service runs in the initial session
+	lines.push(`\t\ttell current session`);
+	lines.push(`\t\t\tset name to ${JSON.stringify(scriptPaths[0].name)}`);
+	lines.push(`\t\t\twrite text "'${escapePath(scriptPaths[0].path)}'"`);
+	lines.push(`\t\tend tell`);
+
+	// Subsequent services: split from the current session
+	for (let i = 1; i < scriptPaths.length; i++) {
+		lines.push(`\t\ttell current session`);
+		lines.push(`\t\t\tset newSession to (split horizontally with default profile)`);
+		lines.push(`\t\tend tell`);
+		lines.push(`\t\ttell newSession`);
+		lines.push(`\t\t\tset name to ${JSON.stringify(scriptPaths[i].name)}`);
+		lines.push(`\t\t\twrite text "'${escapePath(scriptPaths[i].path)}'"`);
+		lines.push(`\t\tend tell`);
+	}
+
+	lines.push('\tend tell');
+	lines.push('end tell');
+
+	const appleScript = lines.join('\n');
+
+	try {
+		execSync(`osascript -e '${appleScript.replace(/'/g, "'\\''")}'`);
+	} catch {
+		return { success: false, message: 'Failed to open iTerm split panes' };
+	}
+
+	return { success: true, message: `Started ${scriptPaths.length} service(s) in iTerm panes` };
+}
+
+/**
+ * Open terminal tabs/panes for all dev services of a repo.
+ * Uses iTerm2 split panes when available, falls back to separate tabs/windows.
  * Returns computed env details (service URLs) for the workstream.
  */
 export function startAllServices(
@@ -272,21 +340,36 @@ export function startAllServices(
 
 	const portStride = repoSettings?.portStride ?? 10;
 	const portOffset = getPortOffset(repoPath, cwd);
+	const terminalApp = getTerminalApp().toLowerCase();
 	const envDetails: Record<string, string> = {};
-	const errors: string[] = [];
 
 	for (const svc of services) {
-		const result = openServiceTerminal(repoPath, cwd, svc, services, portStride);
-		if (!result.success) {
-			errors.push(result.message);
-		}
 		if (svc.portBase !== undefined) {
 			const port = svc.portBase + portOffset * portStride;
 			envDetails[svc.name] = `http://localhost:${port}`;
 		}
 	}
-
 	envDetails['offset'] = String(portOffset);
+
+	// iTerm2: use split panes in a single window
+	if (terminalApp === 'iterm' || terminalApp === 'iterm2') {
+		const scriptPaths = services.map((svc) => ({
+			name: svc.name,
+			path: writeServiceScript(svc, services, portOffset, portStride, cwd)
+		}));
+
+		const result = startServicesInITermPanes(scriptPaths);
+		return { ...result, envDetails };
+	}
+
+	// Fallback: separate terminal windows/tabs
+	const errors: string[] = [];
+	for (const svc of services) {
+		const result = openServiceTerminal(repoPath, cwd, svc, services, portStride);
+		if (!result.success) {
+			errors.push(result.message);
+		}
+	}
 
 	if (errors.length > 0) {
 		return { success: false, message: errors.join('; '), envDetails };
