@@ -84,6 +84,11 @@
 				name = data.title;
 			}
 
+			// Auto-populate branch from Linear's suggested branch name
+			if (!branch && data.branchName) {
+				branch = data.branchName;
+			}
+
 			// Auto-populate PR from Linear attachments
 			if (!prUrl && data.pullRequests?.length > 0) {
 				const pr = data.pullRequests[0];
