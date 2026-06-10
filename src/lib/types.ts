@@ -57,11 +57,19 @@ export interface RepoConfig {
 	setup?: string[];
 }
 
+export interface DevServiceConfig {
+	name: string;
+	command: string;
+	portBase?: number;
+}
+
 export interface RepoSettings {
 	id: string;
 	name: string;
 	path: string;
 	setupScript?: string;
+	portStride?: number;
+	devServices?: DevServiceConfig[];
 }
 
 export type WorkstreamCreate = Omit<Workstream, 'id' | 'createdAt' | 'updatedAt'>;

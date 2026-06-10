@@ -4,7 +4,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { getRepoByPath, getTerminalApp } from '$lib/server/config';
 import { listWorktrees } from '$lib/server/worktree';
-import type { RepoConfig } from '$lib/types';
+import type { RepoConfig, DevServiceConfig } from '$lib/types';
 
 export function readRepoConfig(repoPath: string): RepoConfig | null {
 	// Check app settings first (repo configured via Settings UI)
@@ -157,5 +157,127 @@ ${script.replace(/^#!.*\n?/, '')}
 	return {
 		success: true,
 		message: `Setup script running in ${terminalApp} (port offset: ${portOffset})`
+	};
+}
+
+/**
+ * Build env vars for a dev service given the repo's service list and port offset.
+ * Exports PORT (for the service itself) plus <NAME>_PORT and <NAME>_ROOT for all sibling services.
+ */
+function buildServiceEnv(
+	service: DevServiceConfig,
+	allServices: DevServiceConfig[],
+	portOffset: number,
+	portStride: number
+): string {
+	const lines: string[] = [];
+	const myPort = service.portBase ? service.portBase + portOffset * portStride : undefined;
+
+	if (myPort !== undefined) {
+		lines.push(`export PORT=${myPort}`);
+	}
+	lines.push(`export PORT_OFFSET=${portOffset}`);
+	lines.push(`export PORT_STRIDE=${portStride}`);
+
+	for (const svc of allServices) {
+		if (svc.portBase !== undefined) {
+			const port = svc.portBase + portOffset * portStride;
+			const envName = svc.name.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+			lines.push(`export ${envName}_PORT=${port}`);
+			lines.push(`export ${envName}_ROOT=http://localhost:${port}`);
+		}
+	}
+
+	return lines.join('\n');
+}
+
+/**
+ * Open a terminal tab for a single dev service.
+ * Sets up env vars (PORT, sibling ports/URLs) and runs the command in the worktree dir.
+ */
+export function openServiceTerminal(
+	repoPath: string,
+	cwd: string,
+	service: DevServiceConfig,
+	allServices: DevServiceConfig[],
+	portStride: number
+): { success: boolean; message: string } {
+	const terminalApp = getTerminalApp();
+	const portOffset = getPortOffset(repoPath, cwd);
+	const envVars = buildServiceEnv(service, allServices, portOffset, portStride);
+	const escapedCwd = cwd.replace(/'/g, "'\\''");
+
+	const hubDir = join(homedir(), '.workstream-hub');
+	if (!existsSync(hubDir)) mkdirSync(hubDir, { recursive: true });
+
+	const scriptFileName = `svc-${service.name.replace(/[^a-zA-Z0-9]/g, '_')}-${Date.now()}.sh`;
+	const scriptPath = join(hubDir, scriptFileName);
+
+	const script = `#!/usr/bin/env bash
+set -euo pipefail
+
+${envVars}
+cd '${escapedCwd}'
+
+echo "=== ${service.name} ==="
+echo "Directory: ${cwd}"
+${service.portBase !== undefined ? `echo "Port: $PORT"` : ''}
+echo ""
+
+${service.command}
+`;
+
+	writeFileSync(scriptPath, script, { mode: 0o755 });
+
+	try {
+		runInTerminal(terminalApp, `'${scriptPath.replace(/'/g, "'\\''")}'`);
+	} catch {
+		return { success: false, message: `Failed to open ${terminalApp} for ${service.name}` };
+	}
+
+	return { success: true, message: `${service.name} running in ${terminalApp}` };
+}
+
+/**
+ * Open terminal tabs for all dev services of a repo.
+ * Returns computed env details (service URLs) for the workstream.
+ */
+export function startAllServices(
+	repoPath: string,
+	cwd: string
+): { success: boolean; message: string; envDetails?: Record<string, string> } {
+	const repoSettings = getRepoByPath(repoPath);
+	const services = repoSettings?.devServices ?? [];
+
+	if (services.length === 0) {
+		return { success: true, message: 'No dev services configured' };
+	}
+
+	const portStride = repoSettings?.portStride ?? 10;
+	const portOffset = getPortOffset(repoPath, cwd);
+	const envDetails: Record<string, string> = {};
+	const errors: string[] = [];
+
+	for (const svc of services) {
+		const result = openServiceTerminal(repoPath, cwd, svc, services, portStride);
+		if (!result.success) {
+			errors.push(result.message);
+		}
+		if (svc.portBase !== undefined) {
+			const port = svc.portBase + portOffset * portStride;
+			envDetails[svc.name] = `http://localhost:${port}`;
+		}
+	}
+
+	envDetails['offset'] = String(portOffset);
+
+	if (errors.length > 0) {
+		return { success: false, message: errors.join('; '), envDetails };
+	}
+
+	return {
+		success: true,
+		message: `Started ${services.length} service(s) in ${getTerminalApp()}`,
+		envDetails
 	};
 }

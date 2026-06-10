@@ -1,7 +1,8 @@
 import { json } from '@sveltejs/kit';
 import { listWorkstreams, createWorkstream, updateWorkstream } from '$lib/server/store';
 import { createWorktree } from '$lib/server/worktree';
-import { runSetupInTerminal, readRepoConfig } from '$lib/server/environment';
+import { runSetupInTerminal, readRepoConfig, startAllServices } from '$lib/server/environment';
+import { getRepoByPath } from '$lib/server/config';
 import type { WorkstreamCreate } from '$lib/types';
 import type { RequestHandler } from './$types';
 
@@ -26,10 +27,33 @@ export const POST: RequestHandler = async ({ request }) => {
 			const cwd = worktreeResult.worktreePath;
 			updateWorkstream(workstream.id, { worktreePath: cwd, ideWorkspace: cwd });
 
-			// Open terminal with setup script if one is configured
-			const config = readRepoConfig(workstream.repoPath);
-			if (config?.setup && config.setup.length > 0) {
-				runSetupInTerminal(workstream.repoPath, cwd);
+			// Check if repo has dev services configured — if so, use multi-tab approach
+			const repoSettings = getRepoByPath(workstream.repoPath);
+			const hasDevServices = (repoSettings?.devServices ?? []).length > 0;
+
+			if (hasDevServices) {
+				// First run install script if configured, then start services
+				const config = readRepoConfig(workstream.repoPath);
+				if (config?.setup && config.setup.length > 0) {
+					runSetupInTerminal(workstream.repoPath, cwd);
+				}
+				// Start each dev service in its own terminal tab
+				const serviceResult = startAllServices(workstream.repoPath, cwd);
+				if (serviceResult.envDetails) {
+					updateWorkstream(workstream.id, {
+						environment: {
+							state: 'running',
+							services: [],
+							envDetails: serviceResult.envDetails
+						}
+					});
+				}
+			} else {
+				// Legacy: single setup script in one terminal
+				const config = readRepoConfig(workstream.repoPath);
+				if (config?.setup && config.setup.length > 0) {
+					runSetupInTerminal(workstream.repoPath, cwd);
+				}
 			}
 		} else {
 			updateWorkstream(workstream.id, {

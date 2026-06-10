@@ -8,6 +8,8 @@
 	let editing = $state(false);
 	let confirmingDelete = $state(false);
 	let terminalLoading = $state(false);
+	let servicesLoading = $state(false);
+	let serviceLoading = $state<string | null>(null);
 
 	// Auto-sync Linear ticket on mount
 	onMount(() => {
@@ -79,6 +81,41 @@
 			alert(result.message || 'Teardown failed');
 		}
 		invalidateAll();
+	}
+
+	async function startAllServicesFn() {
+		servicesLoading = true;
+		try {
+			const res = await fetch(`/api/workstreams/${data.workstream.id}/environment`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'start-services' })
+			});
+			const result = await res.json();
+			if (!result.success) {
+				alert(result.message || 'Failed to start services');
+			}
+			invalidateAll();
+		} finally {
+			servicesLoading = false;
+		}
+	}
+
+	async function startService(name: string) {
+		serviceLoading = name;
+		try {
+			const res = await fetch(`/api/workstreams/${data.workstream.id}/environment`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'start-service', serviceName: name })
+			});
+			const result = await res.json();
+			if (!result.success) {
+				alert(result.message || `Failed to start ${name}`);
+			}
+		} finally {
+			serviceLoading = null;
+		}
 	}
 
 	let linearRefreshing = $state(false);
@@ -326,6 +363,82 @@
 						class="rounded-lg border border-red-200 bg-red-50 p-3 font-mono text-xs text-red-700"
 					>
 						{data.workstream.environment.setupLog}
+					</div>
+				{/if}
+			</section>
+		{/if}
+
+		<!-- Dev Services -->
+		{#if data.devServices.length > 0 && data.workstream.worktreePath}
+			<section class="space-y-3">
+				<div class="flex items-center justify-between">
+					<h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">Dev Services</h2>
+					<button
+						onclick={startAllServicesFn}
+						disabled={servicesLoading}
+						class="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
+					>
+						{servicesLoading ? 'Starting...' : 'Start All'}
+					</button>
+				</div>
+				<div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+					{#each data.devServices as svc (svc.name)}
+						<div class="rounded-lg border border-gray-200 bg-white p-3">
+							<div class="flex items-center justify-between">
+								<div>
+									<h3 class="text-sm font-medium text-gray-900">{svc.name}</h3>
+									<p class="mt-0.5 truncate font-mono text-xs text-gray-400" title={svc.command}>
+										{svc.command}
+									</p>
+									{#if svc.portBase !== undefined && data.workstream.environment?.envDetails?.[svc.name]}
+										<a
+											href={data.workstream.environment.envDetails[svc.name]}
+											target="_blank"
+											rel="noopener"
+											class="mt-1 block text-xs text-indigo-600 hover:text-indigo-500 hover:underline"
+										>
+											{data.workstream.environment.envDetails[svc.name]}
+										</a>
+									{:else if svc.portBase !== undefined}
+										<p class="mt-1 text-xs text-gray-400">
+											Port: {svc.portBase} (base)
+										</p>
+									{/if}
+								</div>
+								<button
+									onclick={() => startService(svc.name)}
+									disabled={serviceLoading === svc.name}
+									class="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+								>
+									{serviceLoading === svc.name ? '...' : 'Start'}
+								</button>
+							</div>
+						</div>
+					{/each}
+				</div>
+
+				{#if data.workstream.environment?.envDetails}
+					<div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+						<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+							Environment Details
+						</h3>
+						<div class="mt-2 space-y-1">
+							{#each Object.entries(data.workstream.environment.envDetails) as [key, value] (key)}
+								<div class="flex gap-2 text-xs">
+									<span class="font-medium text-gray-600">{key}:</span>
+									{#if typeof value === 'string' && value.startsWith('http')}
+										<a
+											href={value}
+											target="_blank"
+											rel="noopener"
+											class="text-indigo-600 hover:text-indigo-500 hover:underline">{value}</a
+										>
+									{:else}
+										<span class="font-mono text-gray-500">{value}</span>
+									{/if}
+								</div>
+							{/each}
+						</div>
 					</div>
 				{/if}
 			</section>

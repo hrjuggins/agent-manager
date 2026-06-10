@@ -80,11 +80,7 @@ export function getRepoByPath(path: string): RepoSettings | undefined {
 	return listRepos().find((r) => r.path === path);
 }
 
-export function createRepo(data: {
-	name: string;
-	path: string;
-	setupScript?: string;
-}): RepoSettings {
+export function createRepo(data: Omit<RepoSettings, 'id'>): RepoSettings {
 	const config = readConfig();
 	const repo: RepoSettings = { id: randomUUID(), ...data };
 	config.repos = [...(config.repos ?? []), repo];

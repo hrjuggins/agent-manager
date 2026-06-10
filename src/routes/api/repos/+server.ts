@@ -11,6 +11,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		name: string;
 		path: string;
 		setupScript?: string;
+		portStride?: number;
+		devServices?: Array<{ name: string; command: string; portBase?: number }>;
 	};
 
 	if (!data.name || !data.path) {
