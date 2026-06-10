@@ -3,7 +3,6 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { getRepoByPath, getTerminalApp } from '$lib/server/config';
-import { listWorktrees } from '$lib/server/worktree';
 import type { RepoConfig } from '$lib/types';
 
 export function readRepoConfig(repoPath: string): RepoConfig | null {
@@ -31,16 +30,6 @@ export function readRepoConfig(repoPath: string): RepoConfig | null {
 	}
 }
 
-/**
- * Calculate PORT_OFFSET for a worktree based on its position in git worktree list.
- * Uses case-insensitive comparison for macOS APFS compatibility.
- */
-export function getPortOffset(repoPath: string, cwd: string): number {
-	const worktrees = listWorktrees(repoPath);
-	const cwdLower = cwd.toLowerCase();
-	const worktreeIndex = worktrees.findIndex((w) => w.toLowerCase() === cwdLower);
-	return worktreeIndex >= 0 ? worktreeIndex : worktrees.length;
-}
 
 /**
  * Run a command in the configured terminal app via AppleScript.
@@ -113,7 +102,6 @@ export function runSetupInTerminal(
 	}
 
 	const script = config.setup.join('\n');
-	const portOffset = getPortOffset(repoPath, cwd);
 
 	// Write the script to a temp file in the workstream-hub directory
 	const hubDir = join(homedir(), '.workstream-hub');
@@ -132,14 +120,12 @@ export function runSetupInTerminal(
 	const scriptPath = join(hubDir, scriptFileName);
 
 	const wrapperScript = `${shebang}
-set -euo pipefail
+set -eo pipefail
 
-export PORT_OFFSET=${portOffset}
 cd '${escapedCwd}'
 
 echo "=== Workstream Hub Setup ==="
 echo "Directory: ${cwd}"
-echo "Port offset: ${portOffset}"
 echo "==========================="
 echo ""
 
@@ -156,6 +142,6 @@ ${script.replace(/^#!.*\n?/, '')}
 
 	return {
 		success: true,
-		message: `Setup script running in ${terminalApp} (port offset: ${portOffset})`
+		message: `Setup script running in ${terminalApp}`
 	};
 }
