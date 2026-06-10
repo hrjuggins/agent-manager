@@ -64,6 +64,17 @@ export function openPullRequest(workstream: Workstream): LaunchResult {
 	return { success: true, message: `Opening PR: ${url}` };
 }
 
+export function openGitHubDesktop(workstream: Workstream): LaunchResult {
+	const target = workstream.worktreePath || workstream.repoPath;
+	if (!target) {
+		return { success: false, message: 'No worktree or repo path configured' };
+	}
+	// GitHub Desktop accepts a local repo path via its x-github-client URL scheme
+	const cmd = getOpenCommand();
+	exec(`${cmd} -a "GitHub Desktop" "${target}"`);
+	return { success: true, message: `Opening GitHub Desktop for ${target}` };
+}
+
 function getOpenCommand(): string {
 	switch (process.platform) {
 		case 'darwin':

@@ -40,7 +40,9 @@
 			<div class="mt-1.5 flex flex-wrap items-center gap-1.5">
 				{#if workstream.linearTicket}
 					<span
-						class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {statusColor(workstream.linearTicket.status)}"
+						class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {statusColor(
+							workstream.linearTicket.status
+						)}"
 					>
 						{workstream.linearTicket.status}
 					</span>
@@ -49,7 +51,9 @@
 				{#if workstream.environment?.state}
 					<span class="flex items-center gap-1 text-xs text-gray-500">
 						<span
-							class="inline-block h-1.5 w-1.5 rounded-full {envStateColor(workstream.environment.state)}"
+							class="inline-block h-1.5 w-1.5 rounded-full {envStateColor(
+								workstream.environment.state
+							)}"
 						></span>
 						{workstream.environment.state}
 					</span>
