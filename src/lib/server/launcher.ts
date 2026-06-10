@@ -69,10 +69,11 @@ export function openGitHubDesktop(workstream: Workstream): LaunchResult {
 	if (!target) {
 		return { success: false, message: 'No worktree or repo path configured' };
 	}
-	// GitHub Desktop accepts a local repo path via its x-github-client URL scheme
+	// Use x-github-client URL scheme to navigate to repo (not add it)
+	const repoUrl = `x-github-client://openRepo/${encodeURI(target)}`;
 	const cmd = getOpenCommand();
-	exec(`${cmd} -a "GitHub Desktop" "${target}"`);
-	return { success: true, message: `Opening GitHub Desktop for ${target}` };
+	exec(`${cmd} "${repoUrl}"`);
+	return { success: true, message: `Opening GitHub Desktop Plus for ${target}` };
 }
 
 function getOpenCommand(): string {
