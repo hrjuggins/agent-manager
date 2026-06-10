@@ -114,6 +114,9 @@ export function runSetupInTerminal(
 
 	const script = config.setup.join('\n');
 	const portOffset = getPortOffset(repoPath, cwd);
+	const repoSettings = getRepoByPath(repoPath);
+	const portStride = repoSettings?.portStride ?? 10;
+	const services = repoSettings?.devServices ?? [];
 
 	// Write the script to a temp file in the workstream-hub directory
 	const hubDir = join(homedir(), '.workstream-hub');
@@ -126,6 +129,20 @@ export function runSetupInTerminal(
 		shebang = `#!${shebangMatch[1].trim()}`;
 	}
 
+	// Build env vars for sibling service ports/URLs
+	const envLines: string[] = [
+		`export PORT_OFFSET=${portOffset}`,
+		`export PORT_STRIDE=${portStride}`
+	];
+	for (const svc of services) {
+		if (svc.portBase !== undefined) {
+			const port = svc.portBase + portOffset * portStride;
+			const envName = svc.name.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+			envLines.push(`export ${envName}_PORT=${port}`);
+			envLines.push(`export ${envName}_ROOT=http://localhost:${port}`);
+		}
+	}
+
 	// Create a wrapper script that cd's to the worktree and runs the setup
 	const escapedCwd = cwd.replace(/'/g, "'\\''");
 	const scriptFileName = `setup-${Date.now()}.sh`;
@@ -134,7 +151,7 @@ export function runSetupInTerminal(
 	const wrapperScript = `${shebang}
 set -euo pipefail
 
-export PORT_OFFSET=${portOffset}
+${envLines.join('\n')}
 cd '${escapedCwd}'
 
 echo "=== Workstream Hub Setup ==="
