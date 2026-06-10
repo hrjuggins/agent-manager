@@ -1,7 +1,12 @@
 import { json, error } from '@sveltejs/kit';
 import { getWorkstream, updateWorkstream } from '$lib/server/store';
 import { removeWorktree } from '$lib/server/worktree';
-import { openTerminal, startAllServices, openServiceTerminal } from '$lib/server/environment';
+import {
+	openTerminal,
+	startAllServices,
+	openServiceTerminal,
+	getServiceStatuses
+} from '$lib/server/environment';
 import { getRepoByPath } from '$lib/server/config';
 import type { RequestHandler } from './$types';
 
@@ -59,6 +64,18 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			const portStride = repoSettings?.portStride ?? 10;
 			const result = openServiceTerminal(workstream.repoPath, cwd, service, services, portStride);
 			return json(result);
+		}
+
+		case 'service-status': {
+			if (!workstream.repoPath) {
+				throw error(400, 'No repository path configured');
+			}
+			const cwd = workstream.worktreePath || workstream.repoPath;
+			const repoSettings = getRepoByPath(workstream.repoPath);
+			const services = repoSettings?.devServices ?? [];
+			const portStride = repoSettings?.portStride ?? 10;
+			const statuses = getServiceStatuses(workstream.repoPath, cwd, services, portStride);
+			return json({ success: true, statuses });
 		}
 
 		case 'teardown': {

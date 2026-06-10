@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import WorkstreamForm from '$lib/components/WorkstreamForm.svelte';
 	import type { WorkstreamUpdate } from '$lib/types';
 
@@ -10,10 +10,39 @@
 	let terminalLoading = $state(false);
 	let servicesLoading = $state(false);
 	let serviceLoading = $state<string | null>(null);
+	let serviceStatuses = $state<Record<string, boolean>>({});
+	let statusPollTimer: ReturnType<typeof setInterval> | null = null;
 
-	// Auto-sync Linear ticket on mount
+	async function pollServiceStatuses() {
+		if (!data.workstream.worktreePath || data.devServices.length === 0) return;
+		try {
+			const res = await fetch(`/api/workstreams/${data.workstream.id}/environment`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'service-status' })
+			});
+			const result = await res.json();
+			if (result.statuses) {
+				const map: Record<string, boolean> = {};
+				for (const s of result.statuses) {
+					map[s.name] = s.running;
+				}
+				serviceStatuses = map;
+			}
+		} catch {
+			// Silently fail — poll will retry
+		}
+	}
+
+	// Auto-sync Linear ticket + start polling on mount
 	onMount(() => {
 		refreshLinearTicket();
+		pollServiceStatuses();
+		statusPollTimer = setInterval(pollServiceStatuses, 5000);
+	});
+
+	onDestroy(() => {
+		if (statusPollTimer) clearInterval(statusPollTimer);
 	});
 
 	async function launch(action: string) {
@@ -83,7 +112,13 @@
 		invalidateAll();
 	}
 
+	const allRunning = $derived(
+		data.devServices.length > 0 && data.devServices.every((s) => serviceStatuses[s.name])
+	);
+	const anyRunning = $derived(data.devServices.some((s) => serviceStatuses[s.name]));
+
 	async function startAllServicesFn() {
+		if (allRunning) return;
 		servicesLoading = true;
 		try {
 			const res = await fetch(`/api/workstreams/${data.workstream.id}/environment`, {
@@ -96,12 +131,15 @@
 				alert(result.message || 'Failed to start services');
 			}
 			invalidateAll();
+			// Re-poll immediately to pick up new status
+			setTimeout(pollServiceStatuses, 2000);
 		} finally {
 			servicesLoading = false;
 		}
 	}
 
 	async function startService(name: string) {
+		if (serviceStatuses[name]) return;
 		serviceLoading = name;
 		try {
 			const res = await fetch(`/api/workstreams/${data.workstream.id}/environment`, {
@@ -113,6 +151,8 @@
 			if (!result.success) {
 				alert(result.message || `Failed to start ${name}`);
 			}
+			// Re-poll immediately to pick up new status
+			setTimeout(pollServiceStatuses, 2000);
 		} finally {
 			serviceLoading = null;
 		}
@@ -372,22 +412,64 @@
 		{#if data.devServices.length > 0 && data.workstream.worktreePath}
 			<section class="space-y-3">
 				<div class="flex items-center justify-between">
-					<h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">Dev Services</h2>
+					<div class="flex items-center gap-2">
+						<h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">
+							Dev Services
+						</h2>
+						{#if allRunning}
+							<span
+								class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
+							>
+								<span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+								All running
+							</span>
+						{:else if anyRunning}
+							<span
+								class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700"
+							>
+								<span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+								Partially running
+							</span>
+						{/if}
+					</div>
 					<button
 						onclick={startAllServicesFn}
-						disabled={servicesLoading}
-						class="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
+						disabled={servicesLoading || allRunning}
+						class="rounded-md px-3 py-1.5 text-xs font-medium text-white transition disabled:opacity-50 {allRunning
+							? 'cursor-not-allowed bg-gray-400'
+							: 'bg-indigo-600 hover:bg-indigo-500'}"
 					>
-						{servicesLoading ? 'Starting...' : 'Start All'}
+						{#if servicesLoading}
+							Starting...
+						{:else if allRunning}
+							All Running
+						{:else}
+							Start All
+						{/if}
 					</button>
 				</div>
 				<div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
 					{#each data.devServices as svc (svc.name)}
-						<div class="rounded-lg border border-gray-200 bg-white p-3">
+						{@const running = serviceStatuses[svc.name] ?? false}
+						<div
+							class="rounded-lg border bg-white p-3 {running
+								? 'border-green-300'
+								: 'border-gray-200'}"
+						>
 							<div class="flex items-center justify-between">
-								<div>
-									<h3 class="text-sm font-medium text-gray-900">{svc.name}</h3>
-									<p class="mt-0.5 truncate font-mono text-xs text-gray-400" title={svc.command}>
+								<div class="min-w-0 flex-1">
+									<div class="flex items-center gap-2">
+										<span
+											class="h-2 w-2 flex-shrink-0 rounded-full {running
+												? 'bg-green-500'
+												: 'bg-gray-300'}"
+										></span>
+										<h3 class="text-sm font-medium text-gray-900">{svc.name}</h3>
+									</div>
+									<p
+										class="mt-0.5 truncate pl-4 font-mono text-xs text-gray-400"
+										title={svc.command}
+									>
 										{svc.command}
 									</p>
 									{#if svc.portBase !== undefined && data.workstream.environment?.envDetails?.[svc.name]}
@@ -395,22 +477,30 @@
 											href={data.workstream.environment.envDetails[svc.name]}
 											target="_blank"
 											rel="noopener"
-											class="mt-1 block text-xs text-indigo-600 hover:text-indigo-500 hover:underline"
+											class="mt-1 block pl-4 text-xs text-indigo-600 hover:text-indigo-500 hover:underline"
 										>
 											{data.workstream.environment.envDetails[svc.name]}
 										</a>
 									{:else if svc.portBase !== undefined}
-										<p class="mt-1 text-xs text-gray-400">
+										<p class="mt-1 pl-4 text-xs text-gray-400">
 											Port: {svc.portBase} (base)
 										</p>
 									{/if}
 								</div>
 								<button
 									onclick={() => startService(svc.name)}
-									disabled={serviceLoading === svc.name}
-									class="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+									disabled={serviceLoading === svc.name || running}
+									class="flex-shrink-0 rounded-md border px-2 py-1 text-xs transition disabled:opacity-50 {running
+										? 'cursor-not-allowed border-green-300 text-green-700'
+										: 'border-gray-300 text-gray-700 hover:bg-gray-50'}"
 								>
-									{serviceLoading === svc.name ? '...' : 'Start'}
+									{#if serviceLoading === svc.name}
+										...
+									{:else if running}
+										Running
+									{:else}
+										Start
+									{/if}
 								</button>
 							</div>
 						</div>

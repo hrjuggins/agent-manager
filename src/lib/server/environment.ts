@@ -323,6 +323,34 @@ function startServicesInITermPanes(scriptPaths: { name: string; path: string }[]
 }
 
 /**
+ * Check which dev services are currently running by testing if their computed ports are listening.
+ * Uses lsof on macOS/Linux to check for TCP listeners on each port.
+ */
+export function getServiceStatuses(
+	repoPath: string,
+	cwd: string,
+	services: DevServiceConfig[],
+	portStride: number
+): { name: string; port: number | null; running: boolean }[] {
+	const portOffset = getPortOffset(repoPath, cwd);
+
+	return services.map((svc) => {
+		if (svc.portBase === undefined) {
+			return { name: svc.name, port: null, running: false };
+		}
+		const port = svc.portBase + portOffset * portStride;
+		let running = false;
+		try {
+			execSync(`lsof -iTCP:${port} -sTCP:LISTEN -t`, { stdio: 'pipe' });
+			running = true;
+		} catch {
+			// lsof exits non-zero when no process found — port is free
+		}
+		return { name: svc.name, port, running };
+	});
+}
+
+/**
  * Open terminal tabs/panes for all dev services of a repo.
  * Uses iTerm2 split panes when available, falls back to separate tabs/windows.
  * Returns computed env details (service URLs) for the workstream.
