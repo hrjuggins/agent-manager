@@ -418,6 +418,24 @@ export function getServiceStatuses(
 }
 
 /**
+ * Check if any services are actually running for a workstream.
+ * Used to reconcile stored environment.state with reality.
+ */
+export function areAnyServicesRunning(
+	repoPath: string,
+	cwd: string,
+	portStride: number,
+	storedPorts?: Record<string, number>
+): boolean {
+	const repoSettings = getRepoByPath(repoPath);
+	const services = repoSettings?.devServices ?? [];
+	if (services.length === 0) return false;
+
+	const statuses = getServiceStatuses(repoPath, cwd, services, portStride, storedPorts);
+	return statuses.some((s) => s.running);
+}
+
+/**
  * Open terminal tabs/panes for all dev services of a repo.
  * Uses iTerm2 split panes when available, falls back to separate tabs/windows.
  * Finds available ports for each service and returns actual port allocations.

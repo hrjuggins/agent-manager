@@ -7,6 +7,7 @@
 	const STATUS_COLUMNS = [
 		{ key: 'Backlog', label: 'Backlog', color: 'bg-gray-500' },
 		{ key: 'Todo', label: 'Todo', color: 'bg-brutal-red' },
+		{ key: 'Active', label: 'Active', color: 'bg-brutal-yellow' },
 		{ key: 'In Progress', label: 'In Progress', color: 'bg-brutal-yellow' },
 		{ key: 'Ready for Review', label: 'Ready for Review', color: 'bg-brutal-green' },
 		{ key: 'In Review', label: 'In Review', color: 'bg-brutal-green' },
@@ -15,7 +16,7 @@
 	];
 
 	function getLinearStatus(w: Workstream): string {
-		return w.linearTicket?.status ?? (w.status === 'done' ? 'Done' : 'In Progress');
+		return w.linearTicket?.status ?? (w.status === 'done' ? 'Done' : 'Active');
 	}
 
 	function groupWorkstreams(workstreams: Workstream[]): Record<string, Workstream[]> {

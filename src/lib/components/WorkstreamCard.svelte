@@ -21,6 +21,21 @@
 		return 'bg-ink/30';
 	}
 
+	// Dot color matching the kanban column the workstream belongs to
+	function columnDotColor(): string {
+		const linearStatus = workstream.linearTicket?.status?.toLowerCase();
+		if (linearStatus) {
+			if (linearStatus === 'done') return 'bg-brutal-purple';
+			if (linearStatus === 'in progress') return 'bg-brutal-yellow';
+			if (linearStatus === 'ready for review' || linearStatus === 'in review')
+				return 'bg-brutal-green';
+			if (linearStatus === 'todo') return 'bg-brutal-red';
+			if (linearStatus === 'backlog') return 'bg-gray-500';
+			if (linearStatus === 'cancelled') return 'bg-brutal-red';
+		}
+		return workstream.status === 'done' ? 'bg-brutal-purple' : 'bg-brutal-yellow';
+	}
+
 	async function launch(action: string) {
 		await fetch(`/api/workstreams/${workstream.id}/launch`, {
 			method: 'POST',
@@ -32,11 +47,16 @@
 
 <a
 	href="/workstreams/{workstream.id}"
-	class="group block rounded-sm border-2 border-ink bg-white p-4 shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal"
+	class="group block rounded-sm border-2 border-ink bg-white p-4 shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none"
 >
 	<div class="flex items-start justify-between gap-3">
 		<div class="min-w-0 flex-1">
-			<h3 class="truncate text-sm font-bold text-ink">{workstream.name}</h3>
+			<div class="flex items-center gap-2">
+				<span
+					class="inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full border-2 border-ink {columnDotColor()}"
+				></span>
+				<h3 class="truncate text-sm font-bold text-ink">{workstream.name}</h3>
+			</div>
 			<div class="mt-1.5 flex flex-wrap items-center gap-1.5">
 				{#if workstream.linearTicket}
 					<span
