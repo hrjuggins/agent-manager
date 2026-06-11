@@ -35,12 +35,13 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			}
 			const cwd = workstream.worktreePath || workstream.repoPath;
 			const result = startAllServices(workstream.repoPath, cwd);
-			if (result.envDetails) {
+			if (result.envDetails || result.portMap) {
 				updateWorkstream(params.id, {
 					environment: {
 						state: 'running',
 						services: [],
-						envDetails: result.envDetails
+						envDetails: result.envDetails,
+						portMap: result.portMap
 					}
 				});
 			}
@@ -62,7 +63,32 @@ export const POST: RequestHandler = async ({ params, request }) => {
 				throw error(404, `Service "${serviceName}" not found in repo config`);
 			}
 			const portStride = repoSettings?.portStride ?? 10;
-			const result = openServiceTerminal(workstream.repoPath, cwd, service, services, portStride);
+			const existingPortMap = workstream.environment?.portMap;
+			const result = openServiceTerminal(
+				workstream.repoPath,
+				cwd,
+				service,
+				services,
+				portStride,
+				existingPortMap
+			);
+			// Store the allocated port in environment
+			if (result.port !== undefined) {
+				const currentEnv = workstream.environment ?? { state: 'running', services: [] };
+				const updatedPortMap = { ...(currentEnv.portMap ?? {}), [serviceName]: result.port };
+				const updatedEnvDetails = {
+					...(currentEnv.envDetails ?? {}),
+					[serviceName]: `http://localhost:${result.port}`
+				};
+				updateWorkstream(params.id, {
+					environment: {
+						...currentEnv,
+						state: 'running',
+						portMap: updatedPortMap,
+						envDetails: updatedEnvDetails
+					}
+				});
+			}
 			return json(result);
 		}
 
@@ -74,7 +100,14 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			const repoSettings = getRepoByPath(workstream.repoPath);
 			const services = repoSettings?.devServices ?? [];
 			const portStride = repoSettings?.portStride ?? 10;
-			const statuses = getServiceStatuses(workstream.repoPath, cwd, services, portStride);
+			const storedPorts = workstream.environment?.portMap;
+			const statuses = getServiceStatuses(
+				workstream.repoPath,
+				cwd,
+				services,
+				portStride,
+				storedPorts
+			);
 			return json({ success: true, statuses });
 		}
 

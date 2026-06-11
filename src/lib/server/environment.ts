@@ -6,6 +6,30 @@ import { getRepoByPath, getTerminalApp } from '$lib/server/config';
 import { listWorktrees } from '$lib/server/worktree';
 import type { RepoConfig, DevServiceConfig } from '$lib/types';
 
+/**
+ * Check whether a TCP port is available (nothing listening).
+ */
+function isPortAvailable(port: number): boolean {
+	try {
+		execSync(`lsof -iTCP:${port} -sTCP:LISTEN -t`, { stdio: 'pipe' });
+		return false; // lsof found a listener — port is taken
+	} catch {
+		return true; // lsof exited non-zero — port is free
+	}
+}
+
+/**
+ * Find the first available port starting from `startPort`, scanning up to 100 ports.
+ */
+function findAvailablePort(startPort: number): number {
+	for (let offset = 0; offset < 100; offset++) {
+		const port = startPort + offset;
+		if (isPortAvailable(port)) return port;
+	}
+	// Fallback: return the original port and let the service error
+	return startPort;
+}
+
 export function readRepoConfig(repoPath: string): RepoConfig | null {
 	// Check app settings first (repo configured via Settings UI)
 	const repoSettings = getRepoByPath(repoPath);
@@ -178,17 +202,46 @@ ${script.replace(/^#!.*\n?/, '')}
 }
 
 /**
- * Build env vars for a dev service given the repo's service list and port offset.
+ * Allocate available ports for all services, starting from each service's preferred port.
+ * Returns a map of service name → actual allocated port.
+ */
+function allocatePorts(
+	services: DevServiceConfig[],
+	portOffset: number,
+	portStride: number
+): Record<string, number> {
+	const portMap: Record<string, number> = {};
+	const claimed = new Set<number>();
+
+	for (const svc of services) {
+		if (svc.portBase !== undefined) {
+			const preferred = svc.portBase + portOffset * portStride;
+			let port = preferred;
+			for (let i = 0; i < 100; i++) {
+				if (isPortAvailable(port) && !claimed.has(port)) break;
+				port++;
+			}
+			portMap[svc.name] = port;
+			claimed.add(port);
+		}
+	}
+
+	return portMap;
+}
+
+/**
+ * Build env vars for a dev service using a pre-allocated port map.
  * Exports PORT (for the service itself) plus <NAME>_PORT and <NAME>_ROOT for all sibling services.
  */
 function buildServiceEnv(
 	service: DevServiceConfig,
 	allServices: DevServiceConfig[],
+	portMap: Record<string, number>,
 	portOffset: number,
 	portStride: number
 ): string {
 	const lines: string[] = [];
-	const myPort = service.portBase ? service.portBase + portOffset * portStride : undefined;
+	const myPort = portMap[service.name];
 
 	if (myPort !== undefined) {
 		lines.push(`export PORT=${myPort}`);
@@ -197,8 +250,8 @@ function buildServiceEnv(
 	lines.push(`export PORT_STRIDE=${portStride}`);
 
 	for (const svc of allServices) {
-		if (svc.portBase !== undefined) {
-			const port = svc.portBase + portOffset * portStride;
+		const port = portMap[svc.name];
+		if (port !== undefined) {
 			const envName = svc.name.toUpperCase().replace(/[^A-Z0-9]/g, '_');
 			lines.push(`export ${envName}_PORT=${port}`);
 			lines.push(`export ${envName}_ROOT=http://localhost:${port}`);
@@ -210,18 +263,28 @@ function buildServiceEnv(
 
 /**
  * Open a terminal tab for a single dev service.
- * Sets up env vars (PORT, sibling ports/URLs) and runs the command in the worktree dir.
+ * Finds an available port, sets up env vars, and runs the command in the worktree dir.
+ * Returns the actual port allocated so the caller can store it.
  */
 export function openServiceTerminal(
 	repoPath: string,
 	cwd: string,
 	service: DevServiceConfig,
 	allServices: DevServiceConfig[],
-	portStride: number
-): { success: boolean; message: string } {
+	portStride: number,
+	existingPortMap?: Record<string, number>
+): { success: boolean; message: string; port?: number } {
 	const terminalApp = getTerminalApp();
 	const portOffset = getPortOffset(repoPath, cwd);
-	const scriptPath = writeServiceScript(service, allServices, portOffset, portStride, cwd);
+
+	// Build port map: use existing allocations for siblings, allocate fresh for this service
+	const portMap: Record<string, number> = { ...(existingPortMap ?? {}) };
+	if (service.portBase !== undefined && portMap[service.name] === undefined) {
+		const preferred = service.portBase + portOffset * portStride;
+		portMap[service.name] = findAvailablePort(preferred);
+	}
+
+	const scriptPath = writeServiceScript(service, allServices, portMap, portOffset, portStride, cwd);
 
 	try {
 		runInTerminal(terminalApp, `'${scriptPath.replace(/'/g, "'\\''")}'`);
@@ -229,7 +292,11 @@ export function openServiceTerminal(
 		return { success: false, message: `Failed to open ${terminalApp} for ${service.name}` };
 	}
 
-	return { success: true, message: `${service.name} running in ${terminalApp}` };
+	return {
+		success: true,
+		message: `${service.name} running in ${terminalApp}`,
+		port: portMap[service.name]
+	};
 }
 
 /**
@@ -238,11 +305,12 @@ export function openServiceTerminal(
 function writeServiceScript(
 	service: DevServiceConfig,
 	allServices: DevServiceConfig[],
+	portMap: Record<string, number>,
 	portOffset: number,
 	portStride: number,
 	cwd: string
 ): string {
-	const envVars = buildServiceEnv(service, allServices, portOffset, portStride);
+	const envVars = buildServiceEnv(service, allServices, portMap, portOffset, portStride);
 	const escapedCwd = cwd.replace(/'/g, "'\\''");
 
 	const hubDir = join(homedir(), '.workstream-hub');
@@ -323,42 +391,46 @@ function startServicesInITermPanes(scriptPaths: { name: string; path: string }[]
 }
 
 /**
- * Check which dev services are currently running by testing if their computed ports are listening.
- * Uses lsof on macOS/Linux to check for TCP listeners on each port.
+ * Check which dev services are currently running by testing if their ports are listening.
+ * Uses stored port mappings when available; falls back to computed ports from worktree index.
  */
 export function getServiceStatuses(
 	repoPath: string,
 	cwd: string,
 	services: DevServiceConfig[],
-	portStride: number
+	portStride: number,
+	storedPorts?: Record<string, number>
 ): { name: string; port: number | null; running: boolean }[] {
 	const portOffset = getPortOffset(repoPath, cwd);
 
 	return services.map((svc) => {
+		// Prefer stored port (actual allocation) over computed port
+		const storedPort = storedPorts?.[svc.name];
+		if (storedPort !== undefined) {
+			return { name: svc.name, port: storedPort, running: !isPortAvailable(storedPort) };
+		}
 		if (svc.portBase === undefined) {
 			return { name: svc.name, port: null, running: false };
 		}
 		const port = svc.portBase + portOffset * portStride;
-		let running = false;
-		try {
-			execSync(`lsof -iTCP:${port} -sTCP:LISTEN -t`, { stdio: 'pipe' });
-			running = true;
-		} catch {
-			// lsof exits non-zero when no process found — port is free
-		}
-		return { name: svc.name, port, running };
+		return { name: svc.name, port, running: !isPortAvailable(port) };
 	});
 }
 
 /**
  * Open terminal tabs/panes for all dev services of a repo.
  * Uses iTerm2 split panes when available, falls back to separate tabs/windows.
- * Returns computed env details (service URLs) for the workstream.
+ * Finds available ports for each service and returns actual port allocations.
  */
 export function startAllServices(
 	repoPath: string,
 	cwd: string
-): { success: boolean; message: string; envDetails?: Record<string, string> } {
+): {
+	success: boolean;
+	message: string;
+	envDetails?: Record<string, string>;
+	portMap?: Record<string, number>;
+} {
 	const repoSettings = getRepoByPath(repoPath);
 	const services = repoSettings?.devServices ?? [];
 
@@ -369,11 +441,14 @@ export function startAllServices(
 	const portStride = repoSettings?.portStride ?? 10;
 	const portOffset = getPortOffset(repoPath, cwd);
 	const terminalApp = getTerminalApp().toLowerCase();
-	const envDetails: Record<string, string> = {};
 
+	// Allocate available ports for all services
+	const portMap = allocatePorts(services, portOffset, portStride);
+
+	const envDetails: Record<string, string> = {};
 	for (const svc of services) {
-		if (svc.portBase !== undefined) {
-			const port = svc.portBase + portOffset * portStride;
+		const port = portMap[svc.name];
+		if (port !== undefined) {
 			envDetails[svc.name] = `http://localhost:${port}`;
 		}
 	}
@@ -383,29 +458,30 @@ export function startAllServices(
 	if (terminalApp === 'iterm' || terminalApp === 'iterm2') {
 		const scriptPaths = services.map((svc) => ({
 			name: svc.name,
-			path: writeServiceScript(svc, services, portOffset, portStride, cwd)
+			path: writeServiceScript(svc, services, portMap, portOffset, portStride, cwd)
 		}));
 
 		const result = startServicesInITermPanes(scriptPaths);
-		return { ...result, envDetails };
+		return { ...result, envDetails, portMap };
 	}
 
 	// Fallback: separate terminal windows/tabs
 	const errors: string[] = [];
 	for (const svc of services) {
-		const result = openServiceTerminal(repoPath, cwd, svc, services, portStride);
+		const result = openServiceTerminal(repoPath, cwd, svc, services, portStride, portMap);
 		if (!result.success) {
 			errors.push(result.message);
 		}
 	}
 
 	if (errors.length > 0) {
-		return { success: false, message: errors.join('; '), envDetails };
+		return { success: false, message: errors.join('; '), envDetails, portMap };
 	}
 
 	return {
 		success: true,
 		message: `Started ${services.length} service(s) in ${getTerminalApp()}`,
-		envDetails
+		envDetails,
+		portMap
 	};
 }
