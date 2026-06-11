@@ -230,160 +230,6 @@
 		<p class="mt-1 text-sm font-medium text-ink/60">Configure integrations and repositories</p>
 	</div>
 
-	<!-- IDE -->
-	<section class="space-y-4 rounded-sm border-2 border-ink bg-white p-6 shadow-brutal">
-		<div>
-			<h2 class="text-lg font-black text-ink">IDE</h2>
-			<p class="mt-1 text-sm font-medium text-ink/60">
-				The command used to open workstream directories. For example: <code
-					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
-					>cursor</code
-				>,
-				<code
-					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
-					>code</code
-				>,
-				<code
-					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
-					>webstorm</code
-				>, or
-				<code
-					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
-					>open -a "App Name"</code
-				>.
-			</p>
-		</div>
-
-		<div>
-			<label for="ideCommand" class="block text-sm font-bold text-ink">IDE Command</label>
-			<div class="mt-1 flex gap-2">
-				<input
-					id="ideCommand"
-					type="text"
-					bind:value={ideCommand}
-					placeholder="cursor"
-					class="flex-1 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
-				/>
-			</div>
-		</div>
-
-		<div class="flex items-center gap-3">
-			<button
-				onclick={saveIdeCommand}
-				disabled={ideSaving}
-				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50"
-			>
-				{ideSaving ? 'Saving...' : 'Save'}
-			</button>
-			{#if ideMessage}
-				<span class="text-sm font-bold text-ink/60">{ideMessage}</span>
-			{/if}
-		</div>
-	</section>
-
-	<!-- Terminal -->
-	<section class="space-y-4 rounded-sm border-2 border-ink bg-white p-6 shadow-brutal">
-		<div>
-			<h2 class="text-lg font-black text-ink">Terminal</h2>
-			<p class="mt-1 text-sm font-medium text-ink/60">
-				The macOS app used to run setup scripts. For example: <code
-					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
-					>Terminal</code
-				>,
-				<code
-					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
-					>iTerm</code
-				>,
-				<code
-					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
-					>Warp</code
-				>, or
-				<code
-					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
-					>Alacritty</code
-				>. Defaults to Terminal if not set.
-			</p>
-		</div>
-
-		<div>
-			<label for="terminalApp" class="block text-sm font-bold text-ink">Terminal App</label>
-			<div class="mt-1 flex gap-2">
-				<input
-					id="terminalApp"
-					type="text"
-					bind:value={terminalApp}
-					placeholder="Terminal"
-					class="flex-1 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
-				/>
-			</div>
-		</div>
-
-		<div class="flex items-center gap-3">
-			<button
-				onclick={saveTerminalApp}
-				disabled={terminalSaving}
-				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50"
-			>
-				{terminalSaving ? 'Saving...' : 'Save'}
-			</button>
-			{#if terminalMessage}
-				<span class="text-sm font-bold text-ink/60">{terminalMessage}</span>
-			{/if}
-		</div>
-	</section>
-
-	<!-- Linear Integration -->
-	<section class="space-y-4 rounded-sm border-2 border-ink bg-white p-6 shadow-brutal">
-		<div>
-			<h2 class="text-lg font-black text-ink">Linear Integration</h2>
-			<p class="mt-1 text-sm font-medium text-ink/60">
-				Add your Linear API key to auto-fetch ticket details. Get a key from
-				<a
-					href="https://linear.app/settings/api"
-					target="_blank"
-					class="font-bold text-brutal-blue hover:underline">linear.app/settings/api</a
-				>.
-			</p>
-		</div>
-
-		<div>
-			<label for="linearApiKey" class="block text-sm font-bold text-ink">API Key</label>
-			<div class="mt-1 flex gap-2">
-				<input
-					id="linearApiKey"
-					type="text"
-					bind:value={linearApiKey}
-					placeholder={hasLinearKey ? 'Key configured — enter new key to replace' : 'lin_api_...'}
-					class="flex-1 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
-				/>
-				{#if hasLinearKey}
-					<button
-						onclick={clearLinearKey}
-						class="rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm font-bold text-ink transition hover:bg-brutal-red/10"
-					>
-						Clear
-					</button>
-				{/if}
-			</div>
-			{#if hasLinearKey}
-				<p class="mt-1 text-xs font-bold text-brutal-green">Key configured</p>
-			{/if}
-		</div>
-
-		<div class="flex items-center gap-3">
-			<button
-				onclick={saveLinearKey}
-				disabled={linearSaving}
-				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50"
-			>
-				{linearSaving ? 'Saving...' : 'Save'}
-			</button>
-			{#if linearMessage}
-				<span class="text-sm font-bold text-ink/60">{linearMessage}</span>
-			{/if}
-		</div>
-	</section>
-
 	<!-- Repositories -->
 	<section class="space-y-4 rounded-sm border-2 border-ink bg-white p-6 shadow-brutal">
 		<div class="flex items-center justify-between">
@@ -606,5 +452,159 @@
 				</div>
 			</div>
 		{/if}
+	</section>
+
+	<!-- IDE -->
+	<section class="space-y-4 rounded-sm border-2 border-ink bg-white p-6 shadow-brutal">
+		<div>
+			<h2 class="text-lg font-black text-ink">IDE</h2>
+			<p class="mt-1 text-sm font-medium text-ink/60">
+				The macOS app used to open workstream directories. For example: <code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>Cursor</code
+				>,
+				<code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>Visual Studio Code</code
+				>,
+				<code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>WebStorm</code
+				>, or
+				<code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>Zed</code
+				>. Defaults to Cursor if not set.
+			</p>
+		</div>
+
+		<div>
+			<label for="ideCommand" class="block text-sm font-bold text-ink">IDE App</label>
+			<div class="mt-1 flex gap-2">
+				<input
+					id="ideCommand"
+					type="text"
+					bind:value={ideCommand}
+					placeholder="Cursor"
+					class="flex-1 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
+				/>
+			</div>
+		</div>
+
+		<div class="flex items-center gap-3">
+			<button
+				onclick={saveIdeCommand}
+				disabled={ideSaving}
+				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50"
+			>
+				{ideSaving ? 'Saving...' : 'Save'}
+			</button>
+			{#if ideMessage}
+				<span class="text-sm font-bold text-ink/60">{ideMessage}</span>
+			{/if}
+		</div>
+	</section>
+
+	<!-- Terminal -->
+	<section class="space-y-4 rounded-sm border-2 border-ink bg-white p-6 shadow-brutal">
+		<div>
+			<h2 class="text-lg font-black text-ink">Terminal</h2>
+			<p class="mt-1 text-sm font-medium text-ink/60">
+				The macOS app used to run setup scripts. For example: <code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>Terminal</code
+				>,
+				<code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>iTerm</code
+				>,
+				<code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>Warp</code
+				>, or
+				<code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>Alacritty</code
+				>. Defaults to Terminal if not set.
+			</p>
+		</div>
+
+		<div>
+			<label for="terminalApp" class="block text-sm font-bold text-ink">Terminal App</label>
+			<div class="mt-1 flex gap-2">
+				<input
+					id="terminalApp"
+					type="text"
+					bind:value={terminalApp}
+					placeholder="Terminal"
+					class="flex-1 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
+				/>
+			</div>
+		</div>
+
+		<div class="flex items-center gap-3">
+			<button
+				onclick={saveTerminalApp}
+				disabled={terminalSaving}
+				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50"
+			>
+				{terminalSaving ? 'Saving...' : 'Save'}
+			</button>
+			{#if terminalMessage}
+				<span class="text-sm font-bold text-ink/60">{terminalMessage}</span>
+			{/if}
+		</div>
+	</section>
+
+	<!-- Linear Integration -->
+	<section class="space-y-4 rounded-sm border-2 border-ink bg-white p-6 shadow-brutal">
+		<div>
+			<h2 class="text-lg font-black text-ink">Linear Integration</h2>
+			<p class="mt-1 text-sm font-medium text-ink/60">
+				Add your Linear API key to auto-fetch ticket details. Get a key from
+				<a
+					href="https://linear.app/settings/api"
+					target="_blank"
+					class="font-bold text-brutal-blue hover:underline">linear.app/settings/api</a
+				>.
+			</p>
+		</div>
+
+		<div>
+			<label for="linearApiKey" class="block text-sm font-bold text-ink">API Key</label>
+			<div class="mt-1 flex gap-2">
+				<input
+					id="linearApiKey"
+					type="text"
+					bind:value={linearApiKey}
+					placeholder={hasLinearKey ? 'Key configured — enter new key to replace' : 'lin_api_...'}
+					class="flex-1 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
+				/>
+				{#if hasLinearKey}
+					<button
+						onclick={clearLinearKey}
+						class="rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm font-bold text-ink transition hover:bg-brutal-red/10"
+					>
+						Clear
+					</button>
+				{/if}
+			</div>
+			{#if hasLinearKey}
+				<p class="mt-1 text-xs font-bold text-brutal-green">Key configured</p>
+			{/if}
+		</div>
+
+		<div class="flex items-center gap-3">
+			<button
+				onclick={saveLinearKey}
+				disabled={linearSaving}
+				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50"
+			>
+				{linearSaving ? 'Saving...' : 'Save'}
+			</button>
+			{#if linearMessage}
+				<span class="text-sm font-bold text-ink/60">{linearMessage}</span>
+			{/if}
+		</div>
 	</section>
 </div>
