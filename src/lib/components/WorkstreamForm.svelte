@@ -5,7 +5,9 @@
 	let {
 		workstream,
 		onsubmit
-	}: { workstream?: Workstream; onsubmit: (data: WorkstreamCreate) => void } = $props();
+	}: { workstream?: Workstream; onsubmit: (data: WorkstreamCreate) => Promise<void> | void } = $props();
+
+	let submitting = $state(false);
 
 	let name = $state(workstream?.name ?? '');
 	let status: 'active' | 'done' = $state(workstream?.status ?? 'active');
@@ -108,24 +110,29 @@
 		}
 	}
 
-	function handleSubmit(e: Event) {
+	async function handleSubmit(e: Event) {
 		e.preventDefault();
-		const data: WorkstreamCreate = {
-			name,
-			status,
-			repoPath: repoPath || undefined,
-			branch: branch || undefined,
-			baseBranch: baseBranch || undefined,
+		submitting = true;
+		try {
+			const data: WorkstreamCreate = {
+				name,
+				status,
+				repoPath: repoPath || undefined,
+				branch: branch || undefined,
+				baseBranch: baseBranch || undefined,
 
-			notes: notes || undefined,
-			devServices: workstream?.devServices ?? [],
-			linearTicket:
-				linearId || linearUrl
-					? { id: linearId, url: linearUrl, title: linearTitle, status: linearStatus }
-					: undefined,
-			pullRequest: prUrl || prTitle ? { url: prUrl, title: prTitle, status: prStatus } : undefined
-		};
-		onsubmit(data);
+				notes: notes || undefined,
+				devServices: workstream?.devServices ?? [],
+				linearTicket:
+					linearId || linearUrl
+						? { id: linearId, url: linearUrl, title: linearTitle, status: linearStatus }
+						: undefined,
+				pullRequest: prUrl || prTitle ? { url: prUrl, title: prTitle, status: prStatus } : undefined
+			};
+			await onsubmit(data);
+		} finally {
+			submitting = false;
+		}
 	}
 </script>
 
@@ -317,9 +324,20 @@
 		</a>
 		<button
 			type="submit"
-			class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none"
+			disabled={submitting}
+			class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
 		>
-			{workstream ? 'Save Changes' : 'Create Workstream'}
+			{#if submitting}
+				<span class="inline-flex items-center gap-2">
+					<svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+					</svg>
+					{workstream ? 'Saving...' : 'Creating...'}
+				</span>
+			{:else}
+				{workstream ? 'Save Changes' : 'Create Workstream'}
+			{/if}
 		</button>
 	</div>
 </form>

@@ -7,6 +7,7 @@
 	let { data } = $props();
 	let editing = $state(false);
 	let confirmingDelete = $state(false);
+	let deleting = $state(false);
 	let terminalLoading = $state(false);
 	let servicesLoading = $state(false);
 	let serviceLoading = $state<string | null>(null);
@@ -80,9 +81,14 @@
 	}
 
 	async function handleDelete() {
-		await teardown();
-		await fetch(`/api/workstreams/${data.workstream.id}`, { method: 'DELETE' });
-		goto('/');
+		deleting = true;
+		try {
+			await teardown();
+			await fetch(`/api/workstreams/${data.workstream.id}`, { method: 'DELETE' });
+			goto('/');
+		} finally {
+			deleting = false;
+		}
 	}
 
 	async function openTerminal() {
@@ -267,9 +273,20 @@
 			{#if confirmingDelete}
 				<button
 					onclick={handleDelete}
-					class="rounded-sm border-2 border-ink bg-brutal-red px-3 py-1.5 text-sm font-bold text-white shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none"
+					disabled={deleting}
+					class="rounded-sm border-2 border-ink bg-brutal-red px-3 py-1.5 text-sm font-bold text-white shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
 				>
-					Confirm Delete
+					{#if deleting}
+						<span class="inline-flex items-center gap-2">
+							<svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+							</svg>
+							Deleting...
+						</span>
+					{:else}
+						Confirm Delete
+					{/if}
 				</button>
 				<button
 					onclick={() => (confirmingDelete = false)}
