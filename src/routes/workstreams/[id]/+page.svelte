@@ -310,21 +310,7 @@
 					</svg>
 					{terminalLoading ? 'Opening...' : 'Open Terminal'}
 				</button>
-				<button
-					onclick={() => launch('browser')}
-					disabled={!data.workstream.browserUrl}
-					class="flex items-center gap-2 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm font-bold text-ink shadow-brutal-sm transition hover:-translate-y-0.5 hover:bg-brutal-blue hover:text-white hover:shadow-brutal disabled:cursor-not-allowed disabled:opacity-40"
-				>
-					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"
-						/>
-					</svg>
-					Open Browser
-				</button>
+
 				<button
 					onclick={() => launch('ai-chat')}
 					disabled={!data.workstream.aiChatUrl}
@@ -496,31 +482,6 @@
 						</div>
 					{/each}
 				</div>
-
-				{#if data.workstream.environment?.envDetails}
-					<div class="rounded-sm border-2 border-ink bg-cream p-3">
-						<h3 class="text-xs font-black tracking-wide text-ink/60 uppercase">
-							Environment Details
-						</h3>
-						<div class="mt-2 space-y-1">
-							{#each Object.entries(data.workstream.environment.envDetails) as [key, value] (key)}
-								<div class="flex gap-2 text-xs">
-									<span class="font-bold text-ink">{key}:</span>
-									{#if typeof value === 'string' && value.startsWith('http')}
-										<a
-											href={value}
-											target="_blank"
-											rel="noopener"
-											class="font-bold text-brutal-blue hover:underline">{value}</a
-										>
-									{:else}
-										<span class="font-mono font-medium text-ink/60">{value}</span>
-									{/if}
-								</div>
-							{/each}
-						</div>
-					</div>
-				{/if}
 			</section>
 		{/if}
 
