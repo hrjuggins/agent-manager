@@ -33,8 +33,7 @@
 		const repo = configuredRepos.find((r) => r.id === selectedRepoId);
 		repoPath = repo?.path ?? '';
 	}
-	let aiChatUrl = $state(workstream?.aiChatUrl ?? '');
-	let browserUrl = $state(workstream?.browserUrl ?? '');
+
 	let notes = $state(workstream?.notes ?? '');
 
 	// Linear ticket fields
@@ -117,8 +116,7 @@
 			repoPath: repoPath || undefined,
 			branch: branch || undefined,
 			baseBranch: baseBranch || undefined,
-			aiChatUrl: aiChatUrl || undefined,
-			browserUrl: browserUrl || undefined,
+
 			notes: notes || undefined,
 			devServices: workstream?.devServices ?? [],
 			linearTicket:
@@ -258,30 +256,6 @@
 			/>
 			<p class="mt-1 text-xs font-medium text-ink/40">Branch off this instead of HEAD</p>
 		</div>
-	</div>
-
-	<!-- AI Chat -->
-	<div>
-		<label for="aiChatUrl" class="block text-sm font-bold text-ink">AI Chat URL</label>
-		<input
-			id="aiChatUrl"
-			type="text"
-			bind:value={aiChatUrl}
-			placeholder="https://chat.openai.com/..."
-			class="mt-1 w-full rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
-		/>
-	</div>
-
-	<!-- Browser URL -->
-	<div>
-		<label for="browserUrl" class="block text-sm font-bold text-ink">Localhost Browser URL</label>
-		<input
-			id="browserUrl"
-			type="text"
-			bind:value={browserUrl}
-			placeholder="http://localhost:3000"
-			class="mt-1 w-full rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
-		/>
 	</div>
 
 	<!-- Pull Request -->
