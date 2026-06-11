@@ -42,6 +42,7 @@ export interface EnvironmentStatus {
 	services: RunningService[];
 	setupLog?: string;
 	envDetails?: Record<string, string>;
+	portMap?: Record<string, number>;
 	errors?: string[];
 }
 

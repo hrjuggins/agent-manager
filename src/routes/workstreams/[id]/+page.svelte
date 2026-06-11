@@ -10,11 +10,13 @@
 	let terminalLoading = $state(false);
 	let servicesLoading = $state(false);
 	let serviceLoading = $state<string | null>(null);
-	let serviceStatuses = $state<Record<string, boolean>>({});
+	let serviceStatuses = $state<Record<string, { running: boolean; port: number | null }>>({});
 	let statusPollTimer: ReturnType<typeof setInterval> | null = null;
 
 	async function pollServiceStatuses() {
 		if (!data.workstream.worktreePath || data.devServices.length === 0) return;
+		// Only poll if services have been explicitly started
+		if (data.workstream.environment?.state !== 'running') return;
 		try {
 			const res = await fetch(`/api/workstreams/${data.workstream.id}/environment`, {
 				method: 'POST',
@@ -23,9 +25,9 @@
 			});
 			const result = await res.json();
 			if (result.statuses) {
-				const map: Record<string, boolean> = {};
+				const map: Record<string, { running: boolean; port: number | null }> = {};
 				for (const s of result.statuses) {
-					map[s.name] = s.running;
+					map[s.name] = { running: s.running, port: s.port };
 				}
 				serviceStatuses = map;
 			}
@@ -114,9 +116,9 @@
 	}
 
 	const allRunning = $derived(
-		data.devServices.length > 0 && data.devServices.every((s) => serviceStatuses[s.name])
+		data.devServices.length > 0 && data.devServices.every((s) => serviceStatuses[s.name]?.running)
 	);
-	const anyRunning = $derived(data.devServices.some((s) => serviceStatuses[s.name]));
+	const anyRunning = $derived(data.devServices.some((s) => serviceStatuses[s.name]?.running));
 
 	async function startAllServicesFn() {
 		if (allRunning) return;
@@ -140,7 +142,7 @@
 	}
 
 	async function startService(name: string) {
-		if (serviceStatuses[name]) return;
+		if (serviceStatuses[name]?.running) return;
 		serviceLoading = name;
 		try {
 			const res = await fetch(`/api/workstreams/${data.workstream.id}/environment`, {
@@ -426,7 +428,9 @@
 				</div>
 				<div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
 					{#each data.devServices as svc (svc.name)}
-						{@const running = serviceStatuses[svc.name] ?? false}
+						{@const status = serviceStatuses[svc.name]}
+						{@const running = status?.running ?? false}
+						{@const actualPort = status?.port}
 						<div
 							class="rounded-sm border-2 bg-white p-3 {running
 								? 'border-brutal-green'
@@ -448,7 +452,16 @@
 									>
 										{svc.command}
 									</p>
-									{#if svc.portBase !== undefined && data.workstream.environment?.envDetails?.[svc.name]}
+									{#if actualPort}
+										<a
+											href="http://localhost:{actualPort}"
+											target="_blank"
+											rel="noopener"
+											class="mt-1 block pl-4 text-xs font-bold text-brutal-blue hover:underline"
+										>
+											http://localhost:{actualPort}
+										</a>
+									{:else if svc.portBase !== undefined && data.workstream.environment?.envDetails?.[svc.name]}
 										<a
 											href={data.workstream.environment.envDetails[svc.name]}
 											target="_blank"
