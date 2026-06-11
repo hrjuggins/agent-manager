@@ -18,8 +18,8 @@
 
 <div class="space-y-6">
 	<div>
-		<h1 class="text-2xl font-bold">New Workstream</h1>
-		<p class="text-sm text-gray-500">Create a new workspace for a piece of work</p>
+		<h1 class="text-2xl font-black text-ink">New Workstream</h1>
+		<p class="text-sm font-medium text-ink/60">Create a new workspace for a piece of work</p>
 	</div>
 	<WorkstreamForm onsubmit={handleSubmit} />
 </div>

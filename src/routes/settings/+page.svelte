@@ -226,34 +226,43 @@
 
 <div class="space-y-8">
 	<div>
-		<h1 class="text-2xl font-bold text-gray-900">Settings</h1>
-		<p class="mt-1 text-sm text-gray-500">Configure integrations and repositories</p>
+		<h1 class="text-2xl font-black text-ink">Settings</h1>
+		<p class="mt-1 text-sm font-medium text-ink/60">Configure integrations and repositories</p>
 	</div>
 
 	<!-- IDE -->
-	<section class="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
+	<section class="space-y-4 rounded-sm border-2 border-ink bg-white p-6 shadow-brutal">
 		<div>
-			<h2 class="text-lg font-semibold text-gray-900">IDE</h2>
-			<p class="mt-1 text-sm text-gray-500">
+			<h2 class="text-lg font-black text-ink">IDE</h2>
+			<p class="mt-1 text-sm font-medium text-ink/60">
 				The command used to open workstream directories. For example: <code
-					class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">cursor</code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>cursor</code
 				>,
-				<code class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">code</code>,
-				<code class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">webstorm</code>, or
-				<code class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">open -a "App Name"</code
+				<code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>code</code
+				>,
+				<code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>webstorm</code
+				>, or
+				<code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>open -a "App Name"</code
 				>.
 			</p>
 		</div>
 
 		<div>
-			<label for="ideCommand" class="block text-sm font-medium text-gray-700">IDE Command</label>
+			<label for="ideCommand" class="block text-sm font-bold text-ink">IDE Command</label>
 			<div class="mt-1 flex gap-2">
 				<input
 					id="ideCommand"
 					type="text"
 					bind:value={ideCommand}
 					placeholder="cursor"
-					class="flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+					class="flex-1 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
 				/>
 			</div>
 		</div>
@@ -262,40 +271,49 @@
 			<button
 				onclick={saveIdeCommand}
 				disabled={ideSaving}
-				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
+				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50"
 			>
 				{ideSaving ? 'Saving...' : 'Save'}
 			</button>
 			{#if ideMessage}
-				<span class="text-sm text-gray-500">{ideMessage}</span>
+				<span class="text-sm font-bold text-ink/60">{ideMessage}</span>
 			{/if}
 		</div>
 	</section>
 
 	<!-- Terminal -->
-	<section class="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
+	<section class="space-y-4 rounded-sm border-2 border-ink bg-white p-6 shadow-brutal">
 		<div>
-			<h2 class="text-lg font-semibold text-gray-900">Terminal</h2>
-			<p class="mt-1 text-sm text-gray-500">
+			<h2 class="text-lg font-black text-ink">Terminal</h2>
+			<p class="mt-1 text-sm font-medium text-ink/60">
 				The macOS app used to run setup scripts. For example: <code
-					class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">Terminal</code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>Terminal</code
 				>,
-				<code class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">iTerm</code>,
-				<code class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">Warp</code>, or
-				<code class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-700">Alacritty</code>.
-				Defaults to Terminal if not set.
+				<code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>iTerm</code
+				>,
+				<code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>Warp</code
+				>, or
+				<code
+					class="rounded-sm border-2 border-ink bg-brutal-yellow px-1.5 py-0.5 text-xs font-bold text-ink"
+					>Alacritty</code
+				>. Defaults to Terminal if not set.
 			</p>
 		</div>
 
 		<div>
-			<label for="terminalApp" class="block text-sm font-medium text-gray-700">Terminal App</label>
+			<label for="terminalApp" class="block text-sm font-bold text-ink">Terminal App</label>
 			<div class="mt-1 flex gap-2">
 				<input
 					id="terminalApp"
 					type="text"
 					bind:value={terminalApp}
 					placeholder="Terminal"
-					class="flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+					class="flex-1 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
 				/>
 			</div>
 		</div>
@@ -304,51 +322,51 @@
 			<button
 				onclick={saveTerminalApp}
 				disabled={terminalSaving}
-				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
+				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50"
 			>
 				{terminalSaving ? 'Saving...' : 'Save'}
 			</button>
 			{#if terminalMessage}
-				<span class="text-sm text-gray-500">{terminalMessage}</span>
+				<span class="text-sm font-bold text-ink/60">{terminalMessage}</span>
 			{/if}
 		</div>
 	</section>
 
 	<!-- Linear Integration -->
-	<section class="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
+	<section class="space-y-4 rounded-sm border-2 border-ink bg-white p-6 shadow-brutal">
 		<div>
-			<h2 class="text-lg font-semibold text-gray-900">Linear Integration</h2>
-			<p class="mt-1 text-sm text-gray-500">
+			<h2 class="text-lg font-black text-ink">Linear Integration</h2>
+			<p class="mt-1 text-sm font-medium text-ink/60">
 				Add your Linear API key to auto-fetch ticket details. Get a key from
 				<a
 					href="https://linear.app/settings/api"
 					target="_blank"
-					class="text-indigo-600 hover:text-indigo-500">linear.app/settings/api</a
+					class="font-bold text-brutal-blue hover:underline">linear.app/settings/api</a
 				>.
 			</p>
 		</div>
 
 		<div>
-			<label for="linearApiKey" class="block text-sm font-medium text-gray-700">API Key</label>
+			<label for="linearApiKey" class="block text-sm font-bold text-ink">API Key</label>
 			<div class="mt-1 flex gap-2">
 				<input
 					id="linearApiKey"
 					type="text"
 					bind:value={linearApiKey}
 					placeholder={hasLinearKey ? 'Key configured — enter new key to replace' : 'lin_api_...'}
-					class="flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+					class="flex-1 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
 				/>
 				{#if hasLinearKey}
 					<button
 						onclick={clearLinearKey}
-						class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 transition hover:bg-gray-50"
+						class="rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm font-bold text-ink transition hover:bg-brutal-red/10"
 					>
 						Clear
 					</button>
 				{/if}
 			</div>
 			{#if hasLinearKey}
-				<p class="mt-1 text-xs text-green-600">Key configured</p>
+				<p class="mt-1 text-xs font-bold text-brutal-green">Key configured</p>
 			{/if}
 		</div>
 
@@ -356,29 +374,29 @@
 			<button
 				onclick={saveLinearKey}
 				disabled={linearSaving}
-				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
+				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50"
 			>
 				{linearSaving ? 'Saving...' : 'Save'}
 			</button>
 			{#if linearMessage}
-				<span class="text-sm text-gray-500">{linearMessage}</span>
+				<span class="text-sm font-bold text-ink/60">{linearMessage}</span>
 			{/if}
 		</div>
 	</section>
 
 	<!-- Repositories -->
-	<section class="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
+	<section class="space-y-4 rounded-sm border-2 border-ink bg-white p-6 shadow-brutal">
 		<div class="flex items-center justify-between">
 			<div>
-				<h2 class="text-lg font-semibold text-gray-900">Repositories</h2>
-				<p class="mt-1 text-sm text-gray-500">
+				<h2 class="text-lg font-black text-ink">Repositories</h2>
+				<p class="mt-1 text-sm font-medium text-ink/60">
 					Configure repos with setup scripts that run when creating a new workstream.
 				</p>
 			</div>
 			{#if !showAddRepo}
 				<button
 					onclick={startAddRepo}
-					class="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-500"
+					class="rounded-sm border-2 border-ink bg-brutal-blue px-3 py-1.5 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal"
 				>
 					Add Repo
 				</button>
@@ -389,13 +407,13 @@
 		{#if repos.length > 0 && !showAddRepo}
 			<div class="space-y-3">
 				{#each repos as repo (repo.id)}
-					<div class="rounded-md border border-gray-200 p-4">
+					<div class="rounded-sm border-2 border-ink p-4">
 						<div class="flex items-start justify-between">
 							<div>
-								<h3 class="font-medium text-gray-900">{repo.name}</h3>
-								<p class="mt-0.5 text-sm text-gray-500">{repo.path}</p>
+								<h3 class="font-bold text-ink">{repo.name}</h3>
+								<p class="mt-0.5 text-sm font-medium text-ink/60">{repo.path}</p>
 								{#if repo.setupScript}
-									<p class="mt-1 text-xs text-gray-400">
+									<p class="mt-1 text-xs font-medium text-ink/40">
 										Install: {repo.setupScript.split('\n').filter((l) => l.trim()).length} line{repo.setupScript
 											.split('\n')
 											.filter((l) => l.trim()).length === 1
@@ -404,7 +422,7 @@
 									</p>
 								{/if}
 								{#if repo.devServices && repo.devServices.length > 0}
-									<p class="mt-1 text-xs text-gray-400">
+									<p class="mt-1 text-xs font-medium text-ink/40">
 										Services: {repo.devServices.map((s) => s.name).join(', ')}
 									</p>
 								{/if}
@@ -412,13 +430,13 @@
 							<div class="flex gap-2">
 								<button
 									onclick={() => startEditRepo(repo)}
-									class="rounded-md border border-gray-300 px-2.5 py-1 text-xs text-gray-700 transition hover:bg-gray-50"
+									class="rounded-sm border-2 border-ink px-2.5 py-1 text-xs font-bold text-ink transition hover:bg-brutal-yellow"
 								>
 									Edit
 								</button>
 								<button
 									onclick={() => deleteRepoById(repo.id)}
-									class="rounded-md border border-red-300 px-2.5 py-1 text-xs text-red-600 transition hover:bg-red-50"
+									class="rounded-sm border-2 border-brutal-red px-2.5 py-1 text-xs font-bold text-brutal-red transition hover:bg-brutal-red/10"
 								>
 									Remove
 								</button>
@@ -430,42 +448,42 @@
 		{/if}
 
 		{#if repos.length === 0 && !showAddRepo}
-			<p class="text-sm text-gray-400">No repositories configured yet.</p>
+			<p class="text-sm font-medium text-ink/40">No repositories configured yet.</p>
 		{/if}
 
 		<!-- Add/Edit repo form -->
 		{#if showAddRepo}
-			<div class="space-y-4 rounded-md border border-gray-200 bg-gray-50 p-4">
-				<h3 class="font-medium text-gray-900">{editingRepo ? 'Edit' : 'Add'} Repository</h3>
+			<div class="space-y-4 rounded-sm border-2 border-ink bg-cream p-4">
+				<h3 class="font-black text-ink">{editingRepo ? 'Edit' : 'Add'} Repository</h3>
 
 				<div class="grid gap-4 sm:grid-cols-2">
 					<div>
-						<label for="repoName" class="block text-sm font-medium text-gray-700">Name</label>
+						<label for="repoName" class="block text-sm font-bold text-ink">Name</label>
 						<input
 							id="repoName"
 							type="text"
 							bind:value={repoName}
 							placeholder="e.g. c3-repo"
-							class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+							class="mt-1 w-full rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
 						/>
 					</div>
 					<div>
-						<label for="repoPath" class="block text-sm font-medium text-gray-700">Path</label>
+						<label for="repoPath" class="block text-sm font-bold text-ink">Path</label>
 						<input
 							id="repoPath"
 							type="text"
 							bind:value={repoPath}
 							placeholder="/Users/you/code/c3-repo"
-							class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+							class="mt-1 w-full rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
 						/>
 					</div>
 				</div>
 
 				<div>
-					<label for="setupScript" class="block text-sm font-medium text-gray-700"
+					<label for="setupScript" class="block text-sm font-bold text-ink"
 						>Install Script (optional)</label
 					>
-					<p class="mt-0.5 text-xs text-gray-400">
+					<p class="mt-0.5 text-xs font-medium text-ink/40">
 						Runs once when a workstream is created. Use for dependency installs, config copying,
 						etc. If you also define Dev Services below, the install runs first, then each service
 						opens in its own terminal tab.
@@ -475,7 +493,7 @@
 						bind:value={repoSetupScript}
 						rows={4}
 						placeholder="pnpm install"
-						class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 font-mono text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+						class="mt-1 w-full rounded-sm border-2 border-ink bg-white px-3 py-2 font-mono text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
 					></textarea>
 				</div>
 
@@ -483,8 +501,8 @@
 				<div class="space-y-3">
 					<div class="flex items-center justify-between">
 						<div>
-							<label class="block text-sm font-medium text-gray-700">Dev Services (optional)</label>
-							<p class="mt-0.5 text-xs text-gray-400">
+							<label class="block text-sm font-bold text-ink">Dev Services (optional)</label>
+							<p class="mt-0.5 text-xs font-medium text-ink/40">
 								Each service opens in its own terminal tab. The hub computes ports from the base
 								port + worktree offset × stride.
 							</p>
@@ -492,7 +510,7 @@
 						<button
 							type="button"
 							onclick={addDevService}
-							class="rounded-md border border-gray-300 px-2.5 py-1 text-xs text-gray-700 transition hover:bg-gray-50"
+							class="rounded-sm border-2 border-ink px-2.5 py-1 text-xs font-bold text-ink transition hover:bg-brutal-yellow"
 						>
 							+ Add Service
 						</button>
@@ -501,34 +519,36 @@
 					{#if repoDevServices.length > 0}
 						<div class="space-y-2">
 							{#each repoDevServices as svc, i (i)}
-								<div class="flex gap-2 rounded-md border border-gray-200 bg-white p-3">
+								<div class="flex gap-2 rounded-sm border-2 border-ink bg-white p-3">
 									<div class="flex-1 space-y-2">
 										<div class="grid gap-2 sm:grid-cols-3">
 											<div>
-												<label class="block text-xs text-gray-500">Name</label>
+												<label class="block text-xs font-bold text-ink/60">Name</label>
 												<input
 													type="text"
 													bind:value={svc.name}
 													placeholder="backend"
-													class="mt-0.5 w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+													class="mt-0.5 w-full rounded-sm border-2 border-ink bg-white px-2 py-1.5 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
 												/>
 											</div>
 											<div>
-												<label class="block text-xs text-gray-500">Command</label>
+												<label class="block text-xs font-bold text-ink/60">Command</label>
 												<input
 													type="text"
 													bind:value={svc.command}
 													placeholder="pnpm --dir apps/backend dev"
-													class="mt-0.5 w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 font-mono text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+													class="mt-0.5 w-full rounded-sm border-2 border-ink bg-white px-2 py-1.5 font-mono text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
 												/>
 											</div>
 											<div>
-												<label class="block text-xs text-gray-500">Base Port (optional)</label>
+												<label class="block text-xs font-bold text-ink/60"
+													>Base Port (optional)</label
+												>
 												<input
 													type="number"
 													bind:value={svc.portBase}
 													placeholder="3001"
-													class="mt-0.5 w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+													class="mt-0.5 w-full rounded-sm border-2 border-ink bg-white px-2 py-1.5 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
 												/>
 											</div>
 										</div>
@@ -536,7 +556,7 @@
 									<button
 										type="button"
 										onclick={() => removeDevService(i)}
-										class="self-start rounded p-1 text-red-400 transition hover:bg-red-50 hover:text-red-600"
+										class="self-start rounded-sm border-2 border-brutal-red p-1 text-brutal-red transition hover:bg-brutal-red/10"
 									>
 										<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 											<path
@@ -552,34 +572,34 @@
 						</div>
 
 						<div>
-							<label class="block text-xs text-gray-500"
+							<label class="block text-xs font-bold text-ink/60"
 								>Port Stride (spacing between worktrees, default 10)</label
 							>
 							<input
 								type="number"
 								bind:value={repoPortStride}
 								placeholder="10"
-								class="mt-0.5 w-24 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+								class="mt-0.5 w-24 rounded-sm border-2 border-ink bg-white px-2 py-1.5 text-sm text-ink placeholder:text-ink/30 focus:border-brutal-blue focus:ring-2 focus:ring-brutal-blue/30 focus:outline-none"
 							/>
 						</div>
 					{/if}
 				</div>
 
 				{#if repoMessage}
-					<p class="text-sm text-red-500">{repoMessage}</p>
+					<p class="text-sm font-bold text-brutal-red">{repoMessage}</p>
 				{/if}
 
 				<div class="flex gap-2">
 					<button
 						onclick={saveRepo}
 						disabled={repoSaving}
-						class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
+						class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50"
 					>
 						{repoSaving ? 'Saving...' : editingRepo ? 'Update' : 'Add'}
 					</button>
 					<button
 						onclick={cancelRepoForm}
-						class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50"
+						class="rounded-sm border-2 border-ink bg-white px-4 py-2 text-sm font-bold text-ink shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal"
 					>
 						Cancel
 					</button>
