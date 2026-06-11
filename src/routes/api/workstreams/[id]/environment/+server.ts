@@ -25,7 +25,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 				throw error(400, 'No repository path configured');
 			}
 			const cwd = workstream.worktreePath || workstream.repoPath;
-			const result = openTerminal(cwd);
+			const result = openTerminal(cwd, workstream.name);
 			return json(result);
 		}
 
