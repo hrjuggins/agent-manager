@@ -220,6 +220,22 @@
 		if (s === 'cancelled') return 'border-brutal-red bg-brutal-red/20 text-ink';
 		return 'border-ink/30 bg-ink/10 text-ink/70';
 	}
+
+	// Dot color matching the kanban column the workstream belongs to
+	function workstreamDotColor(): string {
+		const linearStatus = data.workstream.linearTicket?.status?.toLowerCase();
+		if (linearStatus) {
+			if (linearStatus === 'done') return 'bg-brutal-purple';
+			if (linearStatus === 'in progress') return 'bg-brutal-yellow';
+			if (linearStatus === 'ready for review' || linearStatus === 'in review')
+				return 'bg-brutal-green';
+			if (linearStatus === 'todo') return 'bg-brutal-red';
+			if (linearStatus === 'backlog') return 'bg-gray-500';
+			if (linearStatus === 'cancelled') return 'bg-brutal-red';
+		}
+		// Fallback to workstream active/done status
+		return data.workstream.status === 'done' ? 'bg-brutal-purple' : 'bg-brutal-yellow';
+	}
 </script>
 
 <div class="space-y-6">
@@ -227,10 +243,7 @@
 		<div>
 			<div class="flex items-center gap-3">
 				<span
-					class="inline-block h-3.5 w-3.5 rounded-full border-2 border-ink {data.workstream
-						.status === 'active'
-						? 'bg-brutal-green'
-						: 'bg-ink/30'}"
+					class="inline-block h-3.5 w-3.5 rounded-full border-2 border-ink {workstreamDotColor()}"
 				></span>
 				<h1 class="text-2xl font-black text-ink">{data.workstream.name}</h1>
 			</div>
@@ -241,33 +254,33 @@
 		<div class="flex gap-2">
 			<button
 				onclick={toggleStatus}
-				class="rounded-sm border-2 border-ink bg-white px-3 py-1.5 text-sm font-bold text-ink shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal"
+				class="rounded-sm border-2 border-ink bg-white px-3 py-1.5 text-sm font-bold text-ink shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none"
 			>
 				Mark as {data.workstream.status === 'active' ? 'Done' : 'Active'}
 			</button>
 			<button
 				onclick={() => (editing = !editing)}
-				class="rounded-sm border-2 border-ink bg-white px-3 py-1.5 text-sm font-bold text-ink shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal"
+				class="rounded-sm border-2 border-ink bg-white px-3 py-1.5 text-sm font-bold text-ink shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none"
 			>
 				{editing ? 'Cancel' : 'Edit'}
 			</button>
 			{#if confirmingDelete}
 				<button
 					onclick={handleDelete}
-					class="rounded-sm border-2 border-ink bg-brutal-red px-3 py-1.5 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal"
+					class="rounded-sm border-2 border-ink bg-brutal-red px-3 py-1.5 text-sm font-bold text-white shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none"
 				>
 					Confirm Delete
 				</button>
 				<button
 					onclick={() => (confirmingDelete = false)}
-					class="rounded-sm border-2 border-ink bg-white px-3 py-1.5 text-sm font-bold text-ink shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal"
+					class="rounded-sm border-2 border-ink bg-white px-3 py-1.5 text-sm font-bold text-ink shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none"
 				>
 					Cancel
 				</button>
 			{:else}
 				<button
 					onclick={() => (confirmingDelete = true)}
-					class="rounded-sm border-2 border-brutal-red bg-white px-3 py-1.5 text-sm font-bold text-brutal-red shadow-brutal-sm transition hover:-translate-y-0.5 hover:bg-brutal-red/10 hover:shadow-brutal"
+					class="rounded-sm border-2 border-brutal-red bg-white px-3 py-1.5 text-sm font-bold text-brutal-red shadow-brutal-sm transition hover:translate-y-0.5 hover:bg-brutal-red/10 hover:shadow-none"
 				>
 					Delete
 				</button>
@@ -285,7 +298,7 @@
 				<button
 					onclick={() => launch('ide')}
 					disabled={!data.workstream.ideWorkspace && !data.workstream.repoPath}
-					class="flex items-center gap-2 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm font-bold text-ink shadow-brutal-sm transition hover:-translate-y-0.5 hover:bg-brutal-yellow hover:shadow-brutal disabled:cursor-not-allowed disabled:opacity-40"
+					class="flex items-center gap-2 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm font-bold text-ink shadow-brutal-sm transition hover:translate-y-0.5 hover:bg-brutal-yellow hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
@@ -300,7 +313,7 @@
 				<button
 					onclick={openTerminal}
 					disabled={!data.workstream.repoPath || terminalLoading}
-					class="flex items-center gap-2 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm font-bold text-ink shadow-brutal-sm transition hover:-translate-y-0.5 hover:bg-brutal-green hover:shadow-brutal disabled:cursor-not-allowed disabled:opacity-40"
+					class="flex items-center gap-2 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm font-bold text-ink shadow-brutal-sm transition hover:translate-y-0.5 hover:bg-brutal-green hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
@@ -316,7 +329,7 @@
 				<button
 					onclick={() => launch('ai-chat')}
 					disabled={!data.workstream.aiChatUrl}
-					class="flex items-center gap-2 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm font-bold text-ink shadow-brutal-sm transition hover:-translate-y-0.5 hover:bg-brutal-pink hover:text-white hover:shadow-brutal disabled:cursor-not-allowed disabled:opacity-40"
+					class="flex items-center gap-2 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm font-bold text-ink shadow-brutal-sm transition hover:translate-y-0.5 hover:bg-brutal-pink hover:text-white hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
@@ -331,7 +344,7 @@
 				<button
 					onclick={() => launch('github-desktop')}
 					disabled={!data.workstream.worktreePath && !data.workstream.repoPath}
-					class="flex items-center gap-2 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm font-bold text-ink shadow-brutal-sm transition hover:-translate-y-0.5 hover:bg-brutal-purple hover:text-white hover:shadow-brutal disabled:cursor-not-allowed disabled:opacity-40"
+					class="flex items-center gap-2 rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm font-bold text-ink shadow-brutal-sm transition hover:translate-y-0.5 hover:bg-brutal-purple hover:text-white hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
@@ -413,7 +426,7 @@
 					<button
 						onclick={startAllServicesFn}
 						disabled={servicesLoading || allRunning}
-						class="rounded-sm border-2 border-ink px-3 py-1.5 text-xs font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50 {allRunning
+						class="rounded-sm border-2 border-ink px-3 py-1.5 text-xs font-bold text-white shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none disabled:opacity-50 {allRunning
 							? 'cursor-not-allowed bg-ink/30'
 							: 'bg-brutal-blue'}"
 					>
@@ -540,7 +553,7 @@
 				<div class="grid gap-3 sm:grid-cols-2">
 					{#if data.workstream.linearTicket}
 						<div
-							class="rounded-sm border-2 border-ink bg-white p-4 shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal"
+							class="rounded-sm border-2 border-ink bg-white p-4 shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none"
 						>
 							<div class="flex items-start justify-between">
 								<button onclick={() => launch('linear')} class="text-left">
@@ -577,7 +590,7 @@
 					{#if data.workstream.pullRequest}
 						<button
 							onclick={() => launch('pull-request')}
-							class="rounded-sm border-2 border-ink bg-white p-4 text-left shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal"
+							class="rounded-sm border-2 border-ink bg-white p-4 text-left shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none"
 						>
 							<h3 class="text-xs font-black tracking-wide text-ink/60 uppercase">Pull Request</h3>
 							<p class="mt-1 text-sm font-bold text-ink">

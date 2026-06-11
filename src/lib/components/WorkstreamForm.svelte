@@ -311,13 +311,13 @@
 	<div class="flex justify-end gap-3">
 		<a
 			href="/"
-			class="rounded-sm border-2 border-ink bg-white px-4 py-2 text-sm font-bold text-ink shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal"
+			class="rounded-sm border-2 border-ink bg-white px-4 py-2 text-sm font-bold text-ink shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none"
 		>
 			Cancel
 		</a>
 		<button
 			type="submit"
-			class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal"
+			class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none"
 		>
 			{workstream ? 'Save Changes' : 'Create Workstream'}
 		</button>

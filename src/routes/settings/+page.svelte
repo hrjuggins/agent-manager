@@ -242,7 +242,7 @@
 			{#if !showAddRepo}
 				<button
 					onclick={startAddRepo}
-					class="rounded-sm border-2 border-ink bg-brutal-blue px-3 py-1.5 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal"
+					class="rounded-sm border-2 border-ink bg-brutal-blue px-3 py-1.5 text-sm font-bold text-white shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none"
 				>
 					Add Repo
 				</button>
@@ -439,13 +439,13 @@
 					<button
 						onclick={saveRepo}
 						disabled={repoSaving}
-						class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50"
+						class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none disabled:opacity-50"
 					>
 						{repoSaving ? 'Saving...' : editingRepo ? 'Update' : 'Add'}
 					</button>
 					<button
 						onclick={cancelRepoForm}
-						class="rounded-sm border-2 border-ink bg-white px-4 py-2 text-sm font-bold text-ink shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal"
+						class="rounded-sm border-2 border-ink bg-white px-4 py-2 text-sm font-bold text-ink shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none"
 					>
 						Cancel
 					</button>
@@ -495,7 +495,7 @@
 			<button
 				onclick={saveIdeCommand}
 				disabled={ideSaving}
-				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50"
+				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none disabled:opacity-50"
 			>
 				{ideSaving ? 'Saving...' : 'Save'}
 			</button>
@@ -546,7 +546,7 @@
 			<button
 				onclick={saveTerminalApp}
 				disabled={terminalSaving}
-				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50"
+				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none disabled:opacity-50"
 			>
 				{terminalSaving ? 'Saving...' : 'Save'}
 			</button>
@@ -598,7 +598,7 @@
 			<button
 				onclick={saveLinearKey}
 				disabled={linearSaving}
-				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-50"
+				class="rounded-sm border-2 border-ink bg-brutal-blue px-4 py-2 text-sm font-bold text-white shadow-brutal-sm transition hover:translate-y-0.5 hover:shadow-none disabled:opacity-50"
 			>
 				{linearSaving ? 'Saving...' : 'Save'}
 			</button>
