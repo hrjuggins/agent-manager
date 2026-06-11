@@ -69,12 +69,12 @@ export function getPortOffset(repoPath: string, cwd: string): number {
 /**
  * Run a command in the configured terminal app via AppleScript.
  * Handles Terminal.app, iTerm2, and falls back to `open -a` for others.
+ * Always creates a new window/tab.
  */
 function runInTerminal(terminalApp: string, command: string): void {
 	const app = terminalApp.toLowerCase();
 
 	if (app === 'iterm' || app === 'iterm2') {
-		// iTerm2 uses a different AppleScript API than Terminal.app
 		const script = `
 tell application "iTerm"
 	activate
@@ -92,7 +92,6 @@ tell application "Terminal"
 end tell`;
 		execSync(`osascript -e '${script.replace(/'/g, "'\\''")}'`);
 	} else {
-		// Generic fallback: try AppleScript do script, then open -a
 		const script = `
 tell application "${terminalApp}"
 	activate
@@ -101,20 +100,88 @@ end tell`;
 		try {
 			execSync(`osascript -e '${script.replace(/'/g, "'\\''")}'`);
 		} catch {
-			// Last resort: open the app and hope it accepts arguments
 			execSync(`open -a "${terminalApp}"`);
 		}
 	}
 }
 
 /**
- * Open a terminal in the given directory (no setup script).
- * Used by the "Open Terminal" button.
+ * Try to find and activate an existing terminal window whose title contains `marker`.
+ * Returns true if a window was found, false if a new one should be created.
  */
-export function openTerminal(cwd: string): { success: boolean; message: string } {
-	const terminalApp = getTerminalApp();
+function activateExistingTerminal(terminalApp: string, marker: string): boolean {
+	const app = terminalApp.toLowerCase();
+	const safeMarker = marker.replace(/"/g, '\\"');
+
 	try {
-		runInTerminal(terminalApp, `cd '${cwd.replace(/'/g, "'\\''")}'`);
+		if (app === 'iterm' || app === 'iterm2') {
+			const script = `
+tell application "iTerm"
+	repeat with w in windows
+		repeat with t in tabs of w
+			repeat with s in sessions of t
+				if name of s contains "${safeMarker}" then
+					select t
+					tell w to select
+					activate
+					return "found"
+				end if
+			end repeat
+		end repeat
+	end repeat
+	return "not_found"
+end tell`;
+			const result = execSync(`osascript -e '${script.replace(/'/g, "'\\''")}'`, {
+				encoding: 'utf-8'
+			}).trim();
+			return result === 'found';
+		} else if (app === 'terminal' || app === 'terminal.app') {
+			const script = `
+tell application "Terminal"
+	repeat with w in windows
+		if name of w contains "${safeMarker}" then
+			set index of w to 1
+			activate
+			return "found"
+		end if
+	end repeat
+	return "not_found"
+end tell`;
+			const result = execSync(`osascript -e '${script.replace(/'/g, "'\\''")}'`, {
+				encoding: 'utf-8'
+			}).trim();
+			return result === 'found';
+		}
+	} catch {
+		// AppleScript failed — fall through to create new
+	}
+	return false;
+}
+
+/**
+ * Open a named terminal in the given directory.
+ * If a terminal with the same name already exists, activates it instead.
+ * The name is set as the window/tab title so it can be found later.
+ */
+export function openTerminal(
+	cwd: string,
+	name?: string
+): { success: boolean; message: string } {
+	const terminalApp = getTerminalApp();
+	const escapedCwd = cwd.replace(/'/g, "'\\''");
+
+	// If a name is provided, try to find and activate existing terminal
+	if (name) {
+		const found = activateExistingTerminal(terminalApp, name);
+		if (found) {
+			return { success: true, message: `Activated existing terminal for ${name}` };
+		}
+	}
+
+	// Create new terminal with title set to workstream name
+	const titleCmd = name ? `printf '\\e]0;${name.replace(/'/g, "\\'")}\\a'; ` : '';
+	try {
+		runInTerminal(terminalApp, `${titleCmd}cd '${escapedCwd}'`);
 	} catch {
 		return { success: false, message: `Failed to open ${terminalApp}` };
 	}
@@ -127,7 +194,8 @@ export function openTerminal(cwd: string): { success: boolean; message: string }
  */
 export function runSetupInTerminal(
 	repoPath: string,
-	cwd: string
+	cwd: string,
+	name?: string
 ): { success: boolean; message: string } {
 	const config = readRepoConfig(repoPath);
 	const terminalApp = getTerminalApp();
@@ -172,10 +240,11 @@ export function runSetupInTerminal(
 	const scriptFileName = `setup-${Date.now()}.sh`;
 	const scriptPath = join(hubDir, scriptFileName);
 
+	const titleEscape = name ? `printf '\\e]0;${name.replace(/'/g, "\\'")}\\a'\n` : '';
 	const wrapperScript = `${shebang}
 set -euo pipefail
 
-${envLines.join('\n')}
+${titleEscape}${envLines.join('\n')}
 cd '${escapedCwd}'
 
 echo "=== Workstream Hub Setup ==="

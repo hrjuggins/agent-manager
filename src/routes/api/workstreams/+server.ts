@@ -29,7 +29,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			// Run install script if configured (services are started manually via buttons)
 			const config = readRepoConfig(workstream.repoPath);
 			if (config?.setup && config.setup.length > 0) {
-				runSetupInTerminal(workstream.repoPath, cwd);
+				runSetupInTerminal(workstream.repoPath, cwd, workstream.name);
 			}
 		} else {
 			updateWorkstream(workstream.id, {
