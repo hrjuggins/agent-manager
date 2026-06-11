@@ -78,6 +78,7 @@
 	}
 
 	async function handleDelete() {
+		await teardown();
 		await fetch(`/api/workstreams/${data.workstream.id}`, { method: 'DELETE' });
 		goto('/');
 	}
@@ -362,14 +363,6 @@
 			<section class="space-y-3">
 				<div class="flex items-center justify-between">
 					<h2 class="text-sm font-black tracking-wide text-ink/60 uppercase">Workspace</h2>
-					{#if data.workstream.worktreePath}
-						<button
-							onclick={teardown}
-							class="rounded-sm border-2 border-brutal-red bg-white px-2.5 py-1 text-xs font-bold text-brutal-red transition hover:bg-brutal-red/10"
-						>
-							Teardown Worktree
-						</button>
-					{/if}
 				</div>
 				<div class="grid gap-3 sm:grid-cols-2">
 					{#if data.workstream.repoPath}
