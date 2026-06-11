@@ -1,7 +1,8 @@
 <script lang="ts">
 	import './layout.css';
+	import WoodlandSprites from '$lib/components/WoodlandSprites.svelte';
 
-	let { children } = $props();
+	let { data, children } = $props();
 </script>
 
 <svelte:head>
@@ -32,3 +33,5 @@
 		{@render children()}
 	</main>
 </div>
+
+<WoodlandSprites workstreamIds={data.workstreamIds} />
